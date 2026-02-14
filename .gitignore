@@ -1,0 +1,74 @@
+# ==============================
+# Project Main Folders (ALLOW)
+# ==============================
+!frontend/
+!frontend/**
+
+!backend/
+!backend/**
+
+!ai-service/
+!ai-service/**
+
+!extension/
+!extension/**
+
+
+# ==============================
+# Python (AI Service)
+# ==============================
+ai-service/venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+*.coverage
+*.sqlite3
+
+# Environment files
+.env
+.env.*
+*.env
+
+
+# ==============================
+# Node.js (Frontend / Backend / Extension)
+# ==============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# ==============================
+# Build / Production Output
+# ==============================
+dist/
+build/
+.next/
+out/
+coverage/
+
+
+# ==============================
+# Logs
+# ==============================
+logs/
+*.log
+
+
+# ==============================
+# OS / System Files
+# ==============================
+.DS_Store
+Thumbs.db
+
+
+# ==============================
+# IDE / Editor
+# ==============================
+.vscode/
+.idea/

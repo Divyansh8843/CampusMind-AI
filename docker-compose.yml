@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # 1. Frontend (React + Vite)
+  client:
+    build: ./client
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:3000
+    depends_on:
+      - server
+    networks:
+      - campus-network
+
+  # 2. Backend (Node.js + Express)
+  server:
+    build: ./server
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb+srv://<replace_with_your_user>:<replace_with_your_password>@cluster0.mongodb.net/campusmind?retryWrites=true&w=majority
+      - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:8000
+      - CLIENT_URL=http://localhost:5173
+    depends_on:
+      - redis
+      - ai-service
+    networks:
+      - campus-network
+
+  # 3. AI Service (Python + FastAPI)
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    networks:
+      - campus-network
+
+  # 4. Cache (Redis)
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - campus-network
+
+networks:
+  campus-network:
+    driver: bridge
