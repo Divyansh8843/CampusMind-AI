@@ -9,6 +9,8 @@ const Interview = () => {
     const [mode, setMode] = useState(null);
     const [jobRole, setJobRole] = useState('Software Engineer');
     const [loading, setLoading] = useState(false);
+    const [voiceMode, setVoiceMode] = useState(false);
+    const [userTranscript, setUserTranscript] = useState('');
     
     // Proctoring & Status
     const [tabSwitchCount, setTabSwitchCount] = useState(0);
@@ -207,10 +209,15 @@ const Interview = () => {
         recognition.onresult = (e) => {
             let final = '';
             for (let i = e.resultIndex; i < e.results.length; ++i) {
-                if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
                 else setLiveTranscript(final + e.results[i][0].transcript);
             }
-            if (final) setLiveTranscript(final);
+            if (final) {
+                setLiveTranscript(final.trim());
+                if (voiceMode) {
+                    setUserTranscript(prev => prev + ' ' + final.trim());
+                }
+            }
         };
         window.recognition = recognition;
         recognition.start();
@@ -220,7 +227,12 @@ const Interview = () => {
         if (window.recognition) window.recognition.stop();
         setIsListening(false);
         stopTimer();
-        if (liveTranscript.trim()) handleUserResponse(liveTranscript);
+        if (liveTranscript.trim()) {
+            if (voiceMode) {
+                setUserTranscript(prev => prev + ' ' + liveTranscript.trim());
+            }
+            handleUserResponse(liveTranscript);
+        }
     };
 
     const speakText = (text) => {
@@ -243,12 +255,13 @@ const Interview = () => {
         setIsDisqualified(false);
         try {
             const token = localStorage.getItem('token');
-            if (mode === 'mock') {
+            if (mode === 'mock' || mode === 'salary') {
                 setHasVideo(false);
                 setInterviewDuration(600);
-                logActivity('Mock Interview Start', jobRole);
+                const topic = mode === 'salary' ? 'Salary Negotiation - HR Roleplay' : jobRole;
+                logActivity(mode === 'salary' ? 'Salary Negotiation Start' : 'Mock Interview Start', topic);
                 const res = await axios.post(`${API_BASE_URL}/api/interview/chat`, {
-                    history: [], user_response: "", topic: jobRole
+                    history: [], user_response: "", topic: topic
                 }, { headers: { Authorization: `Bearer ${token}` } });
                 
                 const aiResponse = res.data.response;
@@ -307,8 +320,11 @@ const Interview = () => {
                 setFeedback({ score: 0, feedback: "Session Disqualified.", strengths: [], improvements: ["Adhere to integrity rules."]});
             } else {
                 const token = localStorage.getItem('token');
+                const topic = mode === 'salary' ? 'Salary Negotiation - HR Roleplay' : jobRole;
                 const res = await axios.post(`${API_BASE_URL}/api/interview/feedback`, {
-                    history: messages, topic: jobRole
+                    history: messages,
+                    topic: topic,
+                    user_transcript: userTranscript || messages.filter(m => m.role === 'user').map(m => m.content).join(' ')
                 }, { headers: { Authorization: `Bearer ${token}` } });
                 setFeedback(res.data);
             }
@@ -379,8 +395,8 @@ const Interview = () => {
                 className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-blue-500 cursor-pointer transition-all shadow-xl hover:shadow-2xl group relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5 bg-blue-500 rounded-bl-full w-32 h-32"></div>
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform"><Brain size={32} /></div>
-                <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Gen AI Aptitude</h3>
-                <p className="text-slate-500 dark:text-slate-400 mb-6">Proctored assessment powered by LLMs.</p>
+                <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">FAANG MNC Aptitude Test</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">100% rigorous global-standard MNC assessment powered by AI.</p>
                 <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 font-mono"><span className="flex items-center gap-1"><Clock size={14}/> 2 M/Q</span><span className="flex items-center gap-1"><ShieldAlert size={14}/> Strict</span></div>
                 <span className="text-blue-600 font-bold flex items-center gap-2">Start Assessment <ArrowRight size={16}/></span>
             </div>
@@ -388,10 +404,19 @@ const Interview = () => {
                 className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-purple-500 cursor-pointer transition-all shadow-xl hover:shadow-2xl group relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5 bg-purple-500 rounded-bl-full w-32 h-32"></div>
                 <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-6 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform"><Mic size={32} /></div>
-                <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Agentic Mock Interview</h3>
-                <p className="text-slate-500 dark:text-slate-400 mb-6">Interactive AI video interview with real-time feedback.</p>
+                <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">MNC Technical Interview</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Interactive FAANG-level AI video interview testing deep domain concepts.</p>
                  <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 font-mono"><span className="flex items-center gap-1"><Video size={14}/> Camera</span><span className="flex items-center gap-1"><ShieldAlert size={14}/> Strict</span></div>
                 <span className="text-purple-600 font-bold flex items-center gap-2">Start Interview <ArrowRight size={16}/></span>
+            </div>
+            <div onClick={() => { setMode('salary'); setStep('setup'); }} 
+                className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-amber-500 cursor-pointer transition-all shadow-xl hover:shadow-2xl group relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5 bg-amber-500 rounded-bl-full w-32 h-32"></div>
+                <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-6 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform"><Trophy size={32} /></div>
+                <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Salary Negotiator Bot</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Roleplay HR rounds. AI plays "Tough HR" for salary negotiation practice.</p>
+                 <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 font-mono"><span className="flex items-center gap-1"><Mic size={14}/> Voice</span><span className="flex items-center gap-1"><Trophy size={14}/> Practice</span></div>
+                <span className="text-amber-600 font-bold flex items-center gap-2">Start Negotiation <ArrowRight size={16}/></span>
             </div>
         </div>
     );
@@ -500,6 +525,13 @@ const Interview = () => {
                      </p>
                  </div>
                  <div className="flex items-center gap-4 shrink-0">
+                    <button
+                        onClick={() => setVoiceMode(!voiceMode)}
+                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${voiceMode ? 'bg-green-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                        title="Voice Interviewer Mode (detects fillers)"
+                    >
+                        🗣️ Voice
+                    </button>
                     {!isListening ? (
                         <button onClick={startListening} disabled={loading || isSpeaking || isDisqualified}
                             className="w-16 h-16 rounded-full bg-blue-600 text-white hover:bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all scale-100 hover:scale-105 disabled:opacity-50">
@@ -528,15 +560,41 @@ const Interview = () => {
                     {mode === 'aptitude' ? `${Math.round(aptitudeScore)}/${aptitudeQuestions.length}` : `${feedback?.score || 0}/100`}
                 </div>
             </div>
-            {!isDisqualified && mode === 'mock' && feedback && (
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-white/10">
-                         <h3 className="font-bold text-green-600 mb-4 flex items-center gap-2"><CheckCircle size={20}/> Strengths</h3>
-                         <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">{feedback.strengths?.map((s, i) => <li key={i}>• {s}</li>)}</ul>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-white/10">
-                         <h3 className="font-bold text-red-500 mb-4 flex items-center gap-2"><AlertCircle size={20}/> Improvements</h3>
-                         <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">{feedback.improvements?.map((s, i) => <li key={i}>• {s}</li>)}</ul>
+            {!isDisqualified && (mode === 'mock' || mode === 'salary') && feedback && (
+                <div className="space-y-6">
+                    {feedback.voice_analysis && (
+                        <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-2xl border border-purple-200 dark:border-purple-900/30">
+                            <h3 className="font-bold text-purple-600 dark:text-purple-400 mb-4 flex items-center gap-2"><Mic size={20}/> Voice Analysis (AI Voice Interviewer)</h3>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600 dark:text-slate-300">Filler Words Detected:</span>
+                                    <span className="font-bold text-purple-600">{feedback.voice_analysis.filler_count || 0}</span>
+                                </div>
+                                {feedback.voice_analysis.fillers && feedback.voice_analysis.fillers.length > 0 && (
+                                    <div className="mt-2">
+                                        <span className="text-slate-600 dark:text-slate-300">Breakdown: </span>
+                                        {feedback.voice_analysis.fillers.map((f, i) => (
+                                            <span key={i} className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded text-xs mr-1">
+                                                "{f.word}" ({f.count}x)
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                                {feedback.voice_analysis.note && (
+                                    <p className="mt-3 text-purple-700 dark:text-purple-300 font-medium">{feedback.voice_analysis.note}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-white/10">
+                             <h3 className="font-bold text-green-600 mb-4 flex items-center gap-2"><CheckCircle size={20}/> Strengths</h3>
+                             <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">{feedback.strengths?.map((s, i) => <li key={i}>• {s}</li>)}</ul>
+                        </div>
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-white/10">
+                             <h3 className="font-bold text-red-500 mb-4 flex items-center gap-2"><AlertCircle size={20}/> Improvements</h3>
+                             <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">{feedback.improvements?.map((s, i) => <li key={i}>• {s}</li>)}</ul>
+                        </div>
                     </div>
                 </div>
             )}

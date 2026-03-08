@@ -10,7 +10,7 @@ class State(TypedDict):
     response: str
     type: str # "study", "support", "planner", "general"
 
-from langchain_ollama import OllamaLLM
+from app.rag.rag_chain import get_llm
 
 # --- 3. General Chat (No RAG) ---
 def run_general_chat(state: State):
@@ -18,8 +18,9 @@ def run_general_chat(state: State):
     print("--- RUNNING GENERAL CHAT ---")
     query = state['query']
     
-    # Instantiate LLM directly
-    llm = OllamaLLM(model="llama2", temperature=0.7)
+    llm_engine = get_llm()
+    if not llm_engine:
+         return {"response": "AI Brain is offline."}
     
     if "analyzing lecture" in query.lower():
         print("🎓 Processing Lecture Notes with Cornell Format...")
@@ -32,9 +33,9 @@ def run_general_chat(state: State):
             "## 🚀 Action Items\n(Things to study or review)\n\n"
             f"Transcript:\n{query}"
         )
-        response = llm.invoke(prompt)
+        response = llm_engine.invoke(prompt)
     else:
-        response = llm.invoke(query)
+        response = llm_engine.invoke(query)
     
     return {"response": response}
 

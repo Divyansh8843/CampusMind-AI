@@ -52,6 +52,11 @@ const postSchema = new mongoose.Schema({
         default: 0
     },
     answers: [answerSchema],
+    domain: {
+        type: String,
+        required: true,
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now

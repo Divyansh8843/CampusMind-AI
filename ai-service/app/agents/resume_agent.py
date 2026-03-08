@@ -1,15 +1,15 @@
-from langchain_ollama import OllamaLLM
+from app.rag.rag_chain import get_llm
 from langchain_core.prompts import PromptTemplate
-
-# Use Ollama for local LLM (no API key required)
-llm = OllamaLLM(model="llama2", temperature=0.7)
 
 def analyze_resume(text: str, jd: str = ""):
     """
     Analyzes a resume against a job description (optional) or general best practices.
-    Uses local Ollama model - no external API keys required.
+    Uses centralized LLM with fallback.
     """
     try:
+        llm_engine = get_llm()
+        if not llm_engine:
+            return {"response": "AI Brain is offline. Please start Ollama or provide an OpenAI API Key."}
         
         template = """
         You are an expert Career Counselor and Resume Reviewer for college students.
@@ -34,7 +34,7 @@ def analyze_resume(text: str, jd: str = ""):
         )
         
         final_prompt = prompt.format(resume=text, jd=jd)
-        response = llm.invoke(final_prompt)
+        response = llm_engine.invoke(final_prompt)
         
         # Handle both string and object responses
         if isinstance(response, str):

@@ -122,6 +122,13 @@ const SupportBot = () => {
                             </div>
                             <div className="flex items-center gap-1">
                                 <button 
+                                    onClick={() => { setMessages([]); setShowHistory(false); }}
+                                    className="p-1 hover:bg-white/10 rounded-full transition-colors font-bold flex items-center justify-center"
+                                    title="New Chat"
+                                >
+                                    <span className="text-lg leading-none">+</span>
+                                </button>
+                                <button 
                                     onClick={() => setShowHistory(!showHistory)}
                                     className="p-1 hover:bg-white/10 rounded-full transition-colors"
                                     title="Previous Chats"

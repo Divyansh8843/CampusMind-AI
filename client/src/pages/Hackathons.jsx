@@ -14,7 +14,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  RefreshCw // Added Refresh Icon
+  RefreshCw,
+  Code,
+  X
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -37,6 +39,12 @@ const Hackathons = () => {
     const [myRole, setMyRole] = useState('Full Stack Developer');
     const [lookingFor, setLookingFor] = useState('UI/UX Designer');
     const [matchLoading, setMatchLoading] = useState(false);
+
+    // Squad Builder
+    const [showSquadBuilder, setShowSquadBuilder] = useState(false);
+    const [squadSkill, setSquadSkill] = useState('');
+    const [squad, setSquad] = useState([]);
+    const [squadLoading, setSquadLoading] = useState(false);
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -104,6 +112,55 @@ const Hackathons = () => {
         }
     };
 
+    const findSquad = async () => {
+        if (!squadSkill.trim()) return;
+        setSquadLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${API_BASE_URL}/api/hackathons/squad`, {
+                params: { skill: squadSkill.trim() },
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setSquad(res.data.squad || []);
+                if (res.data.squad.length === 0) {
+                    toast('No students found with that skill. Try a different keyword.');
+                } else {
+                    toast.success(`Found ${res.data.squad.length} potential teammates!`);
+                }
+            }
+        } catch (err) {
+            toast.error('Failed to find squad');
+        } finally {
+            setSquadLoading(false);
+        }
+    };
+
+    const searchSquad = async () => {
+        if (!squadSkill.trim()) {
+            toast.error('Enter a skill (e.g., React, Python, Designer)');
+            return;
+        }
+        setSquadLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${API_BASE_URL}/api/hackathons/squad`, {
+                params: { skill: squadSkill.trim(), limit: 10 },
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setSquad(res.data.squad || []);
+                if (res.data.squad.length === 0) {
+                    toast('No students found with that skill. Try a different keyword.');
+                }
+            }
+        } catch (err) {
+            toast.error('Failed to search squad');
+        } finally {
+            setSquadLoading(false);
+        }
+    };
+
     return (
         <div className="w-full relative min-h-screen">
             <Toaster position="top-center" />
@@ -133,6 +190,12 @@ const Hackathons = () => {
                          className="px-4 py-2 rounded-lg text-sm font-bold bg-white shadow text-blue-600 transition-all cursor-default"
                     >
                         Opportunities
+                    </button>
+                    <button
+                        onClick={() => setShowSquadBuilder(true)}
+                        className="px-4 py-2 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-all"
+                    >
+                        Squad Builder
                     </button>
                 </div>
             </div>
@@ -366,6 +429,88 @@ const Hackathons = () => {
                                     {matchLoading ? 'Broadcasting...' : 'Broadcast to Agent'}
                                 </button>
                             </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Squad Builder Modal */}
+            <AnimatePresence>
+                {showSquadBuilder && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+                        onClick={() => { setShowSquadBuilder(false); setSquad([]); setSquadSkill(''); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.95 }}
+                            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <Code size={24} className="text-purple-600" /> Hackathon Squad Builder
+                                </h2>
+                                <button onClick={() => { setShowSquadBuilder(false); setSquad([]); setSquadSkill(''); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                                Search for students by skill. Results sorted by XP (most experienced first).
+                            </p>
+                            <div className="flex gap-2 mb-6">
+                                <input
+                                    type="text"
+                                    value={squadSkill}
+                                    onChange={(e) => setSquadSkill(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && searchSquad()}
+                                    placeholder="e.g., React, Frontend, Python, Designer..."
+                                    className="flex-1 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                />
+                                <button
+                                    onClick={searchSquad}
+                                    disabled={squadLoading}
+                                    className="px-6 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {squadLoading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />} Search
+                                </button>
+                            </div>
+                            {squad.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="font-bold text-slate-900 dark:text-white">Suggested Squad Members ({squad.length})</h3>
+                                    {squad.map((member, idx) => (
+                                        <div key={member._id || idx} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <img src={member.picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} alt={member.name} className="w-12 h-12 rounded-full" />
+                                                <div>
+                                                    <h4 className="font-bold text-slate-900 dark:text-white">{member.name}</h4>
+                                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                        {member.branch && <span>{member.branch}</span>}
+                                                        {member.year && <span>• Year {member.year}</span>}
+                                                        <span className="text-purple-600 dark:text-purple-400 font-bold">• {member.xp || 0} XP</span>
+                                                    </div>
+                                                    {member.skills && member.skills.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {member.skills.slice(0, 3).map((skill, i) => (
+                                                                <span key={i} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 text-xs rounded">
+                                                                    {skill}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button className="px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 transition-colors">
+                                                Invite
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}

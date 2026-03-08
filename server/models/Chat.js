@@ -13,7 +13,7 @@ const ChatSchema = new mongoose.Schema({
   },
   type: {
       type: String,
-      enum: ['study', 'support'],
+      enum: ['study', 'support', 'general', 'planner'],
       default: 'study'
   },
   content: {

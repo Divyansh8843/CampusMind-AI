@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { MessageSquare, ThumbsUp, Award, Search, Plus, User, Star, Loader2, MessageCircle } from 'lucide-react';
+import { MessageSquare, ThumbsUp, Award, Search, Plus, User, Star, Loader2, MessageCircle, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Community = () => {
@@ -15,6 +15,9 @@ const Community = () => {
 
     const [newQuestion, setNewQuestion] = useState({ title: '', content: '' });
     const [searchTerm, setSearchTerm] = useState('');
+    
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const isAdmin = user.role === 'admin';
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -25,7 +28,10 @@ const Community = () => {
     const fetchPosts = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_BASE_URL}/api/community`);
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${API_BASE_URL}/api/community`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             setQuestions(res.data);
         } catch (error) {
             console.error("Failed to fetch community posts", error);
@@ -115,6 +121,35 @@ const Community = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (!confirm("Are you sure you want to delete this post?")) return;
+        try {
+            const token = localStorage.getItem('token');
+            // Using admin endpoint since this is an admin action
+            await axios.delete(`${API_BASE_URL}/api/admin/community/posts/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchPosts(); // Refresh list
+        } catch (err) { 
+            console.error("Delete Post Error", err);
+            alert("Failed to delete post"); 
+        }
+    };
+
+    const handleDeleteAnswer = async (postId, answerId) => {
+        if(!confirm("Moderate/Delete this answer?")) return;
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(`${API_BASE_URL}/api/admin/community/posts/${postId}/answers/${answerId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchPosts();
+        } catch (e) { 
+            console.error("Delete Answer Error", e);
+            alert("Failed to delete answer"); 
+        }
+    };
+
     const filteredQuestions = questions.filter(q => 
         q.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
         q.content.toLowerCase().includes(searchTerm.toLowerCase())
@@ -126,7 +161,7 @@ const Community = () => {
             <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-2 flex items-center gap-3">
-                        <MessageSquare className="text-indigo-600" size={40} /> Global Community
+                        <MessageSquare className="text-indigo-600" size={40} /> Campus Community
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 text-lg">Ask questions, rate answers, and earn reputation.</p>
                 </div>
@@ -169,15 +204,22 @@ const Community = () => {
                                                 <span className="text-xs">{new Date(q.createdAt).toLocaleDateString()}</span>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 p-2 rounded-xl text-slate-500 cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/5" onClick={() => handleRate(q._id)}>
-                                             <ThumbsUp size={18} />
-                                             <span className="font-bold text-lg">{q.upvotes || 0}</span>
+                                        <div className="flex gap-2">
+                                            {isAdmin && (
+                                                <button onClick={() => handleDelete(q._id)} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl hover:bg-red-100 transition-colors" title="Moderate Post">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                            <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-900 p-2 rounded-xl text-slate-500 cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/5" onClick={() => handleRate(q._id)}>
+                                                 <ThumbsUp size={18} />
+                                                 <span className="font-bold text-lg">{q.upvotes || 0}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <p className="text-slate-600 dark:text-slate-300 mb-4 leading-relaxed whitespace-pre-wrap">{q.content}</p>
                                     <div className="flex justify-between items-center mb-6">
                                         <div className="flex gap-2">
-                                            {q.tags.map(tag => ( <span key={tag} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full border border-blue-100 dark:border-blue-900/30">#{tag}</span> ))}
+                                            {(q.tags || []).map(tag => ( <span key={tag} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full border border-blue-100 dark:border-blue-900/30">#{tag}</span> ))}
                                         </div>
                                         <button 
                                             onClick={() => openReplyModal(q._id)}
@@ -202,6 +244,11 @@ const Community = () => {
                                                                 <button onClick={() => handleRate(q._id, ans._id)} className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-green-500 transition-colors">
                                                                     <Star size={12} /> Rate
                                                                 </button>
+                                                                {isAdmin && (
+                                                                    <button onClick={() => handleDeleteAnswer(q._id, ans._id)} className="text-red-400 hover:text-red-600 transition-colors" title="Delete Answer">
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <p className="text-sm text-slate-600 dark:text-slate-400">{ans.content}</p>

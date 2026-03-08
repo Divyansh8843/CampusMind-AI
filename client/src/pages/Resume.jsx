@@ -5,7 +5,7 @@ import { FileText, CheckCircle, AlertTriangle, Zap, ArrowRight, BookOpen, Upload
 import toast, { Toaster } from 'react-hot-toast';
 
 const Resume = () => {
-    const [resumeText, setResumeText] = useState("");
+    const [resumeFile, setResumeFile] = useState(null);
     const [fileName, setFileName] = useState("");
     const [jdText, setJdText] = useState("");
     const [loading, setLoading] = useState(false);
@@ -18,29 +18,13 @@ const Resume = () => {
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
-
+        if (!/\.(pdf|doc|docx)$/i.test(file.name)) {
+            toast.error("Please upload PDF or DOCX only.");
+            return;
+        }
+        setResumeFile(file);
         setFileName(file.name);
-        
-        const toastId = toast.loading("Uploading & Parsing Resume...");
-        
-        setTimeout(() => {
-            // Simulated Extracted Text based on file name to feel real
-            const simulatedText = `
-                EXPERIENCE
-                Software Engineer | Tech Corp | 2022-Present
-                - Developed scalable APIs using Node.js and React.
-                - Optimized database queries reducing load by 40%.
-                
-                EDUCATION
-                B.S. Computer Science | University of Tech | 2022
-                
-                SKILLS
-                JavaScript, Python, React, AWS, Docker
-            `.trim();
-            
-            setResumeText(simulatedText);
-            toast.success("Resume Parsed Successfully!", { id: toastId });
-        }, 2000);
+        setResult(null);
     };
 
 
@@ -76,34 +60,42 @@ const Resume = () => {
 
 
     const handleAnalyze = async () => {
-        if (!resumeText.trim()) {
+        if (!resumeFile) {
             toast.error("Please upload your resume PDF/DOCX first.");
             return;
         }
 
         setLoading(true);
+        setResult(null);
         try {
             const token = localStorage.getItem('token');
-            // Simulate Analysis 
-             await new Promise(r => setTimeout(r, 1500)); 
-            
-             const mockResponse = {
-                success: true,
-                match_percentage: Math.floor(Math.random() * (95 - 70) + 70) + "%",
-                suggestions: [
-                    "Include more metrics in your experience (e.g., 'Improved X by Y%').",
-                    "Add 'Team Leadership' to your skills section.",
-                    "Mention specific tools used in the project section."
-                ],
-                missing_keywords: ["Kubernetes", "CI/CD", "GraphQL"]
-             };
+            const formData = new FormData();
+            formData.append('resume', resumeFile);
+            if (jdText.trim()) formData.append('jd', jdText.trim());
 
-            setResult(mockResponse);
-            toast.success("Analysis Complete!");
+            const res = await axios.post(`${API_BASE_URL}/api/resume/upload`, formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
 
+            if (res.data.success) {
+                setResult({
+                    success: true,
+                    match_percentage: typeof res.data.match_percentage === 'string' ? res.data.match_percentage : (res.data.match_percentage + '%'),
+                    suggestions: res.data.suggestions || [],
+                    missing_keywords: res.data.missing_keywords || [],
+                    ai_advice: res.data.ai_advice
+                });
+                toast.success("Analysis complete! +50 XP");
+            } else {
+                throw new Error(res.data.message || 'Analysis failed');
+            }
         } catch (error) {
             console.error(error);
-            toast.error("Analysis failed. Please try again.");
+            const msg = error.response?.data?.message || "Analysis failed. Please try again.";
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
@@ -111,7 +103,7 @@ const Resume = () => {
 
     const clearFile = () => {
         setFileName("");
-        setResumeText("");
+        setResumeFile(null);
         setResult(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
@@ -204,7 +196,7 @@ const Resume = () => {
 
                     <button
                         onClick={handleAnalyze}
-                        disabled={loading || !resumeText}
+                        disabled={loading || !resumeFile}
                         className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? (
@@ -273,6 +265,36 @@ const Resume = () => {
                                                 <span key={i} className="px-3 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-900/30">
                                                     {k}
                                                 </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* AI Advice */}
+                                {result.ai_advice && (
+                                    <div className="pt-4 border-t border-slate-200 dark:border-white/10">
+                                        <h3 className="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                                            <Zap size={22} className="text-blue-500 fill-blue-500/20" /> Strategic AI Tailoring Advice
+                                        </h3>
+                                        <div className="bg-slate-50/80 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
+                                            {result.ai_advice.split('\n\n').map((paragraph, index) => (
+                                                <p 
+                                                    key={index} 
+                                                    className="text-slate-700 dark:text-slate-300 mb-4 last:mb-0 leading-loose text-[15px] text-justify font-medium"
+                                                >
+                                                    {paragraph.split('\n').map((line, i) => (
+                                                        <React.Fragment key={i}>
+                                                            {line.includes('**') || line.includes('* ') || line.includes('- ') ? (
+                                                                <span className="block mt-2 pl-4 border-l-2 border-blue-400 dark:border-blue-600 text-slate-800 dark:text-slate-200 font-semibold shadow-sm p-1">
+                                                                    {line.replace(/\*\*/g, '').replace(/^[-*]\s*/, '• ')}
+                                                                </span>
+                                                            ) : (
+                                                                <span>{line.replace(/\*\*/g, '')}</span>
+                                                            )}
+                                                            {i !== paragraph.split('\n').length - 1 && <br />}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </p>
                                             ))}
                                         </div>
                                     </div>

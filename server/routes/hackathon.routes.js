@@ -1,5 +1,6 @@
 import express from "express";
-import puppeteer from "puppeteer";
+import axios from "axios";
+import * as cheerio from "cheerio";
 import authMiddleware from "../middleware/auth.js";
 import nodemailer from "nodemailer";
 import { TeamRequest } from "../models/TeamRequest.js";
@@ -95,7 +96,6 @@ let hackathonCache = {
 
 // GET /api/hackathons
 router.get("/", authMiddleware, async (req, res) => {
-    let browser = null;
     try {
         const { page = 1, limit = 10, remote = 'true', refresh = 'false' } = req.query;
         const isRemote = remote === 'true';
@@ -142,102 +142,96 @@ router.get("/", authMiddleware, async (req, res) => {
             });
         }
 
-        console.log("Cache Stale/Empty. Initializing Agentic Scraper...");
-
-        // Launch Agentic Browser
-        browser = await puppeteer.launch({
-            headless: "new",
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage']
-        });
-        const browserPage = await browser.newPage();
-        
-        // Optimizations
-        await browserPage.setRequestInterception(true);
-        browserPage.on('request', (req) => {
-            if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) req.abort();
-            else req.continue();
-        });
+        console.log("Cache Stale/Empty. Initializing High-Performance Scraper...");
 
         let globalOpportunities = [];
 
-        // Define Helper for Unstop Fetching (Agentic API Access)
-        const scrapeUnstop = async (type) => {
-             try {
+        // 1. Fetch from Unstop API 直接 (Direct Node Access)
+        const fetchUnstop = async (type) => {
+            try {
                 const unstopUrl = `https://unstop.com/api/public/opportunity/search-result?opportunity=${type}&q=${isRemote ? 'remote' : ''}`;
-                return await browserPage.evaluate(async (url, typeName) => {
-                    try {
-                        const res = await fetch(url);
-                        const json = await res.json();
-                        return json.data.data.slice(0, 15).map(h => ({
-                             id: `un-${h.id}`,
-                             title: h.title,
-                             link: `https://unstop.com/${h.type}/${h.slug}`,
-                             image: h.banner_image || "https://d8it4huxumps7.cloudfront.net/uploads/images/unstop/branding-2023/logo_black.svg",
-                             platform: "Unstop",
-                             date: h.start_date ? new Date(h.start_date).toDateString() : "Open Now",
-                             tags: [typeName === 'internships' ? "Internship" : "Hackathon", "Global", ...(h.filters?.map(f => f.name) || [])]
-                        }));
-                    } catch (e) { return []; }
-                }, unstopUrl, type);
-             } catch (e) { 
-                 console.error(`Unstop ${type} Error:`, e.message);
-                 return []; 
-             }
+                const response = await axios.get(unstopUrl, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                });
+                
+                const data = response.data?.data?.data || [];
+                return data.slice(0, 20).map(h => ({
+                    id: `un-${h.id}`,
+                    title: h.title,
+                    link: `https://unstop.com/${h.type}/${h.slug}`,
+                    image: h.banner_image || "https://d8it4huxumps7.cloudfront.net/uploads/images/unstop/branding-2023/logo_black.svg",
+                    platform: "Unstop",
+                    date: h.start_date ? new Date(h.start_date).toDateString() : "Open Now",
+                    tags: [type === 'internships' ? "Internship" : "Hackathon", "Global", ...(h.filters?.map(f => f.name) || [])]
+                }));
+            } catch (e) {
+                console.error(`Unstop ${type} Node Error:`, e.message);
+                return [];
+            }
         };
 
-        // Parallel Agent Execution
-        const [devpostData, unstopHacks, unstopJobs] = await Promise.all([
-            // 1. Scrape Devpost
-            (async () => {
-                try {
-                    const devpostUrl = isRemote 
-                        ? 'https://devpost.com/hackathons?challenge_type[]=online&sort_by=Submission+Deadline' 
-                        : 'https://devpost.com/hackathons?sort_by=Submission+Deadline';
-                    
-                    await browserPage.goto(devpostUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-                    return await browserPage.evaluate(() => {
-                        const hacks = [];
-                        document.querySelectorAll('.hackathon-tile').forEach((el, i) => {
-                            if (i > 20) return;
-                            const title = el.querySelector('.main-content h3')?.innerText.trim();
-                            const link = el.querySelector('a')?.href;
-                            const image = el.querySelector('.hackathon-thumbnail')?.getAttribute('src') || "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Devpost_logo.svg/2560px-Devpost_logo.svg.png";
-                            const date = el.querySelector('.submission-period')?.innerText.trim();
-                            const tags = Array.from(el.querySelectorAll('.theme-label')).map(t => t.innerText.trim());
-                            
-                            if (title && link) {
-                                hacks.push({
-                                    id: `dp-${Math.random().toString(36).substr(2, 9)}`,
-                                    title,
-                                    link,
-                                    image: image.startsWith('//') ? `https:${image}` : image,
-                                    platform: "Devpost",
-                                    date: date || "Upcoming",
-                                    tags: [...tags, "Hackathon"]
-                                });
-                            }
-                        });
-                        return hacks;
+        // 2. Fetch from Devpost using Cheerio (Fast Agentic Parsing)
+        const fetchDevpost = async () => {
+            try {
+                const devpostUrl = isRemote 
+                    ? 'https://devpost.com/hackathons?challenge_type[]=online&sort_by=Submission+Deadline' 
+                    : 'https://devpost.com/hackathons?sort_by=Submission+Deadline';
+                
+                const response = await axios.get(devpostUrl, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                });
+
+                const $ = cheerio.load(response.data);
+                const hacks = [];
+
+                $('.hackathon-tile').each((i, el) => {
+                    if (i > 15) return;
+                    const title = $(el).find('.main-content h3').text().trim();
+                    const link = $(el).find('a').attr('href');
+                    let image = $(el).find('.hackathon-thumbnail').attr('src') || "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Devpost_logo.svg/2560px-Devpost_logo.svg.png";
+                    const date = $(el).find('.submission-period').text().trim();
+                    const tags = [];
+                    $(el).find('.theme-label').each((j, tag) => {
+                        tags.push($(tag).text().trim());
                     });
-                } catch (e) { console.log("Devpost Error", e.message); return []; }
-            })(),
-            // 2. Scrape Unstop Hackathons
-            scrapeUnstop('hackathons'),
-            // 3. Scrape Unstop Internships (Jobs)
-            scrapeUnstop('internships')
+
+                    if (title && link) {
+                        hacks.push({
+                            id: `dp-${Math.random().toString(36).substr(2, 9)}`,
+                            title,
+                            link,
+                            image: image.startsWith('//') ? `https:${image}` : image,
+                            platform: "Devpost",
+                            date: date || "Upcoming",
+                            tags: [...tags, "Hackathon"]
+                        });
+                    }
+                });
+                return hacks;
+            } catch (e) {
+                console.error("Devpost Node Error:", e.message);
+                return [];
+            }
+        };
+
+        // Parallel Agent Node Processing
+        const [devpostData, unstopHacks, unstopJobs] = await Promise.all([
+            fetchDevpost(),
+            fetchUnstop('hackathons'),
+            fetchUnstop('internships')
         ]);
 
         globalOpportunities = [...devpostData, ...unstopHacks, ...unstopJobs];
 
-        // 4. Hack2Skill (Reference)
+        // 3. Add Feature Node: Hack2Skill
         globalOpportunities.push({
             id: 'h2s-feat',
-            title: 'Hack2Skill Global ETHIndia',
+            title: 'Hack2Skill Global Series',
             link: 'https://hack2skill.com/hackathons',
             image: "https://hack2skill.com/assets/images/logo_black.svg",
             platform: "Hack2Skill",
             date: "Live Now",
-            tags: ["Hackathon", "Web3", "Blockchain"]
+            tags: ["Hackathon", "Web3", "Emerging Tech"]
         });
 
         // Update Cache
@@ -247,9 +241,8 @@ router.get("/", authMiddleware, async (req, res) => {
             isRemote: isRemote
         };
 
-        // Filter Logic (Server-Side)
+        // Filter Logic
         let filteredResults = globalOpportunities;
-
         const { type, platform, search } = req.query;
 
         if (type && type !== 'All Type') {
@@ -269,7 +262,7 @@ router.get("/", authMiddleware, async (req, res) => {
             );
         }
 
-        // Pagination Logic
+        // Pagination
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const startIndex = (pageNum - 1) * limitNum;
@@ -287,28 +280,53 @@ router.get("/", authMiddleware, async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Agent failed:", error);
+        console.error("Hackathon Scraper Agent failed:", error);
         
-        // Fallback to Cache if Agent fails
         if (hackathonCache.data.length > 0) {
-             const pageNum = parseInt(req.query.page || 1);
-             const limitNum = parseInt(req.query.limit || 10);
+            const pageNum = parseInt(req.query.page || 1);
+            const limitNum = parseInt(req.query.limit || 10);
             return res.json({
                 success: true, 
-                message: "Agent failed, serving cached data.",
+                message: "Agent encountered network resistance, serving cached data.",
                 hackathons: hackathonCache.data.slice((pageNum-1)*limitNum, pageNum*limitNum),
                 totalPages: Math.ceil(hackathonCache.data.length / limitNum),
                 cached: true
             });
         }
 
-        res.status(500).json({ success: false, message: "Agent failed to retrieve hackathons." });
-    } finally {
-        if (browser) await browser.close();
+        res.status(500).json({ success: false, message: "Global Scraper Agent failed to retrieve hackathons." });
     }
 });
 
 
+
+/**
+ * @desc Hackathon Squad Builder - Find students by skill (real DB, sorted by XP)
+ * @route GET /api/hackathons/squad?skill=React
+ */
+router.get("/squad", authMiddleware, async (req, res) => {
+    try {
+        const { skill, limit = 10 } = req.query;
+        const userId = req.user.userId;
+        if (!skill || !String(skill).trim()) {
+            return res.json({ success: true, squad: [] });
+        }
+        const search = String(skill).trim();
+        const students = await User.find({
+            _id: { $ne: userId },
+            role: 'student',
+            domain: req.user.domain,
+            skills: { $regex: search, $options: 'i' }
+        })
+            .sort({ xp: -1 })
+            .limit(parseInt(limit, 10) || 10)
+            .select('name picture skills xp branch year');
+        res.json({ success: true, squad: students });
+    } catch (err) {
+        console.error("Squad builder error:", err);
+        res.status(500).json({ message: "Failed to find squad" });
+    }
+});
 
 /**
  * @desc Find a Teammate (Agentic Match)

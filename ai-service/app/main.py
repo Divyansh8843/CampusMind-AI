@@ -3,6 +3,8 @@ from app.api.chat import router as chat_router
 from app.api.upload import router as upload_router
 from app.api.resume import router as resume_router
 from app.api.interview import router as interview_router
+from app.api.syllabus import router as syllabus_router
+from app.api.mentorship import router as mentorship_router
 from dotenv import load_dotenv
 import os
 import warnings
@@ -47,6 +49,8 @@ app.include_router(chat_router)
 app.include_router(upload_router)
 app.include_router(resume_router)
 app.include_router(interview_router)
+app.include_router(syllabus_router)
+app.include_router(mentorship_router)
 
 if __name__ == "__main__":
     import uvicorn

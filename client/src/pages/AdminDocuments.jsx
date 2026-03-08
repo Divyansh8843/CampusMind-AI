@@ -100,52 +100,38 @@ const AdminDocuments = () => {
             animate={{ opacity: 1 }} 
             className="max-w-7xl mx-auto space-y-8 pb-12"
         >
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-4">
-                <Link to="/admin" className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors">
-                    <ArrowLeft size={24}/>
-                </Link>
-                <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/30 text-white">
-                    <FileText size={32} />
-                </div>
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Document Management</h1>
-                    <p className="text-slate-500 dark:text-slate-400">View and manage all student uploads.</p>
+            {/* Premium Header */}
+            <div className="bg-gradient-to-br from-blue-900 to-indigo-950 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl border border-white/5">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[100px] -mr-32 -mt-32 animate-pulse"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex items-center gap-6">
+                        <Link to="/admin" className="p-4 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all backdrop-blur-md border border-white/10">
+                            <ArrowLeft size={24}/>
+                        </Link>
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold uppercase tracking-widest mb-3">
+                                <FileText size={12} /> Resource Authority
+                            </div>
+                            <h1 className="text-4xl font-black tracking-tight">Document <span className="text-blue-400">Vault</span></h1>
+                            <p className="text-blue-200/60 mt-2 font-medium">Global repository management for millions of academic assets.</p>
+                        </div>
+                    </div>
+                    
+                    {stats && (
+                        <div className="flex gap-4">
+                            <div className="px-6 py-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
+                                <p className="text-blue-300 text-[10px] font-black uppercase tracking-widest mb-1">Total Assets</p>
+                                <p className="text-2xl font-black">{stats.totalCount}</p>
+                            </div>
+                            <div className="px-6 py-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
+                                <p className="text-blue-300 text-[10px] font-black uppercase tracking-widest mb-1">Data Volume</p>
+                                <p className="text-2xl font-black">{(stats.totalSize / (1024 * 1024)).toFixed(1)} <span className="text-sm font-normal text-blue-400">MB</span></p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {/* Stats Overview */}
-            {stats && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-1">Total Files</p>
-                            <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{stats.totalCount}</h3>
-                        </div>
-                        <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-xl">
-                            <FileText size={24}/>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-1">Total Storage</p>
-                            <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{(stats.totalSize / (1024 * 1024)).toFixed(2)} MB</h3>
-                        </div>
-                        <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-xl">
-                            <Download size={24}/>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-1">Avg Size</p>
-                            <h3 className="text-3xl font-bold text-slate-800 dark:text-white">{(stats.avgSize / 1024).toFixed(1)} KB</h3>
-                        </div>
-                        <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-xl">
-                            <Shield size={24}/>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Filters */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 shadow-sm">
@@ -230,7 +216,7 @@ const AdminDocuments = () => {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button 
-                                                    onClick={() => window.open(doc.url || `${API_BASE_URL}/uploads/${doc.filename}`, '_blank')}
+                                                    onClick={() => window.open(doc.viewUrl || doc.url || `${API_BASE_URL}/uploads/${doc.filename}`, '_blank')}
                                                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                                     title="View"
                                                 >

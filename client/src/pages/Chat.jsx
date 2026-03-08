@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Send, User, Bot, Paperclip, Loader2, FileText, CheckCircle, X, Mic, Volume2, History, ArrowUp, PenTool, Users, Lightbulb, Video, Monitor, Calendar } from 'lucide-react';
+import { Send, User, Bot, Paperclip, Loader2, FileText, CheckCircle, X, Mic, Volume2, History, ArrowUp, PenTool, Users, Lightbulb, Video, Monitor, Calendar, Code, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logActivity } from '../utils/logger';
 import toast, { Toaster } from 'react-hot-toast';
@@ -12,12 +12,127 @@ const Chat = () => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [showWhiteboard, setShowWhiteboard] = useState(false);
+    const [whiteboardMode, setWhiteboardMode] = useState('whiteboard'); // 'whiteboard' | 'code'
+    const [codeLanguage, setCodeLanguage] = useState('javascript');
+    const [codeContent, setCodeContent] = useState('');
+    const [codeOutput, setCodeOutput] = useState('');
     
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
     // Peer Match State
     const [showPeerModal, setShowPeerModal] = useState(false);
     const [peers, setPeers] = useState([]);
     const [connectingPeer, setConnectingPeer] = useState(null);
     const [activeCall, setActiveCall] = useState(false); // Video Call State
+
+    // Fetch Peers (Real Users - logged-in students from platform)
+    const fetchPeers = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${API_BASE_URL}/api/peers`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const raw = res.data;
+            const list = (raw.success && raw.data ? raw.data : Array.isArray(raw) ? raw : []);
+            const realPeers = list.slice(0, 10).map(u => ({
+                id: u._id || u.id,
+                name: u.name || 'Student',
+                uni: u.branch ? `${u.branch} • Year ${u.year || '-'}` : 'CampusMind',
+                status: 'Online',
+                topic: (u.skills && u.skills[0]) || u.currentStudyTopic || 'General Study'
+            }));
+            setPeers(realPeers);
+        } catch (err) {
+            // Fallback: try community alumni
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.get(`${API_BASE_URL}/api/community/alumni`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const raw = res.data;
+                const list = (raw.success && raw.data ? raw.data : Array.isArray(raw) ? raw : []);
+                setPeers(list.slice(0, 10).map(u => ({
+                    id: u._id || u.id,
+                    name: u.name || 'Student',
+                    uni: 'CampusMind',
+                    status: 'Online',
+                    topic: (u.skills && u.skills[0]) || u.role || 'General Study'
+                })));
+            } catch (e) {
+                console.error("Failed to fetch peers", e);
+                setPeers([]);
+            }
+        }
+    };
+
+    
+
+    const [incomingRequests, setIncomingRequests] = useState([]);
+    const [outgoingRequests, setOutgoingRequests] = useState([]);
+
+    const fetchPeerRequests = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${API_BASE_URL}/api/peers/requests`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setIncomingRequests(res.data.incoming || []);
+                setOutgoingRequests(res.data.outgoing || []);
+            }
+        } catch (e) { console.error('Fetch peer requests', e); }
+    };
+
+    const connectToPeer = async (peer) => {
+        setConnectingPeer(peer.id);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.post(`${API_BASE_URL}/api/peers/request`, {
+                toUserId: peer.id,
+                topic: peer.topic || 'Concept explanation'
+            }, { headers: { Authorization: `Bearer ${token}` } });
+            toast.dismiss();
+            if (res.data.success) {
+                toast.success(`Request sent to ${peer.name}! They can accept from their Peer Match.`);
+                fetchPeerRequests();
+            } else {
+                toast.error(res.data.message || 'Failed to send request');
+            }
+        } catch (err) {
+            toast.dismiss();
+            toast.error(err.response?.data?.message || 'Failed to send request');
+        } finally {
+            setConnectingPeer(null);
+        }
+    };
+
+    const acceptPeerRequest = async (req) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.post(`${API_BASE_URL}/api/peers/requests/${req._id}/accept`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                toast.success('Request accepted! Opening whiteboard & call.');
+                setShowPeerModal(false);
+                setShowWhiteboard(true);
+                setActiveCall(true);
+                setIncomingRequests(prev => prev.filter(r => r._id !== req._id));
+            }
+        } catch (e) {
+            toast.error('Failed to accept');
+        }
+    };
+
+    const rejectPeerRequest = async (req) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(`${API_BASE_URL}/api/peers/requests/${req._id}/reject`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setIncomingRequests(prev => prev.filter(r => r._id !== req._id));
+        } catch (e) {}
+    };
 
     const [showHistory, setShowHistory] = useState(false);
     const [chatSessions, setChatSessions] = useState([]);
@@ -32,13 +147,40 @@ const Chat = () => {
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(null);
 
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const messagesEndRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const messagesContainerRef = useRef(null);
+    const localVideoRef = useRef(null);
 
     useEffect(() => {
         logActivity('Opened AI Chat', 'User entered the chat interface');
         fetchHistory(1, true);
         fetchChatSessions();
     }, []);
+
+    // Handle Video Call Stream
+    useEffect(() => {
+        let stream = null;
+        if (activeCall) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(s => {
+                    stream = s;
+                    if (localVideoRef.current) {
+                        localVideoRef.current.srcObject = stream;
+                    }
+                })
+                .catch(err => {
+                    console.error("Camera Error:", err);
+                    toast.error("Camera access denied");
+                    setActiveCall(false);
+                });
+        }
+        return () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [activeCall]);
 
     const fetchHistory = async (pageNum = 1, initial = false) => {
         setLoadingHistory(true);
@@ -78,11 +220,6 @@ const Chat = () => {
         } catch (error) { console.error("Failed to fetch sessions", error); }
     };
 
-    const messagesEndRef = useRef(null);
-    const messagesContainerRef = useRef(null);
-    const fileInputRef = useRef(null);
-    const localVideoRef = useRef(null);
-
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -90,23 +227,6 @@ const Chat = () => {
     useEffect(() => {
         if (page === 1) scrollToBottom();
     }, [messages, isListening, page]);
-
-    // Handle Video Stream
-    useEffect(() => {
-        if (activeCall && localVideoRef.current) {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                .then(stream => {
-                    localVideoRef.current.srcObject = stream;
-                })
-                .catch(err => console.error("Camera Error:", err));
-        } else if (!activeCall && localVideoRef.current) {
-             const stream = localVideoRef.current.srcObject;
-             if (stream) {
-                 stream.getTracks().forEach(track => track.stop());
-                 localVideoRef.current.srcObject = null;
-             }
-        }
-    }, [activeCall]);
 
     const toggleListening = () => {
         if (isListening) {
@@ -232,56 +352,35 @@ const Chat = () => {
         recognition.start();
     };
 
-    const findPeer = async () => {
-        setConnectingPeer(null);
-        const toastId = toast.loading('Scanning Global Student Network...');
-
-        try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_BASE_URL}/api/study/match`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            if (res.data.peers && res.data.peers.length > 0) {
-                 const realPeers = res.data.peers.map(p => ({
-                     id: p._id,
-                     name: p.name,
-                     uni: p.level || 'CampusMind Student',
-                     status: 'Online',
-                     topic: p.currentStudyTopic || 'General Studies'
-                 }));
-                 setPeers(realPeers);
-                 toast.success(`Found ${realPeers.length} Active Peers!`, { id: toastId });
-                 setShowPeerModal(true);
-            } else {
-                 toast.error("No active peers found for your topic right now.", { id: toastId });
-                 // Fallback to simulated peers for demo if real ones missing (optional, but User wants 'work in live realdata')
-                 // For now, respect empty if empty, or maybe hint to set topic.
-            }
-        } catch (error) {
-            console.error("Peer Search Error:", error);
-            toast.error("Failed to search peer network.", { id: toastId });
-        }
-    };
-
-    const connectToPeer = (peer) => {
-        setConnectingPeer(peer.id);
-        toast.loading(`Sending Request to ${peer.name}...`);
-        
-        setTimeout(() => {
-            toast.dismiss();
-            toast.success(`${peer.name} Accepted! Opening Whiteboard...`);
-            setShowPeerModal(false);
-            setShowWhiteboard(true);
-            setActiveCall(true); // Auto start call
-        }, 2000);
+    const findPeer = () => {
+        setShowPeerModal(true);
+        fetchPeers();
+        fetchPeerRequests();
     };
 
     const startStudyPlan = () => {
         setInput("Create a robust 1-month study plan for my exams based on my uploaded notes.");
     };
 
-    // ----------------------------
+    const runCode = () => {
+        if (!codeContent.trim()) return;
+        try {
+            if (codeLanguage === 'javascript') {
+                const func = new Function(codeContent);
+                const result = func();
+                setCodeOutput(String(result || 'Code executed (no return value)'));
+            } else {
+                setCodeOutput(`Copy this code and run it in your ${codeLanguage} IDE or use replit.com/${codeLanguage}`);
+            }
+        } catch (err) {
+            setCodeOutput(`Error: ${err.message}`);
+        }
+    };
+
+    const startNewChat = () => {
+        setMessages([{ role: 'assistant', content: 'Hello! I am your AI Study Companion. I have access to ALL your uploaded documents. Ask me anything about any file you have uploaded!' }]);
+        setShowHistory(false);
+    };
 
     return (
         <div className="max-w-4xl mx-auto h-[calc(100vh-120px)] flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden relative">
@@ -300,9 +399,14 @@ const Chat = () => {
                         </span>
                     </div>
                 </div>
-                <button onClick={() => setShowHistory(!showHistory)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Previous Chats">
-                    <History size={20} className="text-slate-600 dark:text-slate-300" />
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={startNewChat} className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+                        <span className="text-xl leading-none font-medium -mt-0.5">+</span> New
+                    </button>
+                    <button onClick={() => setShowHistory(!showHistory)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Previous Chats">
+                        <History size={20} className="text-slate-600 dark:text-slate-300" />
+                    </button>
+                </div>
             </div>
 
             {/* Previous Chats Sidebar */}
@@ -403,7 +507,27 @@ const Chat = () => {
                              <motion.div initial={{scale:0.95}} animate={{scale:1}} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
                                  <button onClick={() => setShowPeerModal(false)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><X size={20}/></button>
                                  <h3 className="text-xl font-bold mb-1 pt-2">Global Peer Match</h3>
-                                 <p className="text-sm text-slate-500 mb-6">Connect with verified students from top universities.</p>
+                                 <p className="text-sm text-slate-500 mb-4">Connect with logged-in students. Send a request or accept one below.</p>
+                                 
+                                 {incomingRequests.length > 0 && (
+                                     <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-900/30">
+                                         <h4 className="text-xs font-bold text-green-800 dark:text-green-300 uppercase mb-2">Requests to you</h4>
+                                         {incomingRequests.map(req => (
+                                             <div key={req._id} className="flex items-center justify-between gap-2 py-2 border-b border-green-100 dark:border-green-900/20 last:border-0">
+                                                 <div className="flex items-center gap-2">
+                                                     <div className="w-8 h-8 rounded-full bg-green-200 dark:bg-green-800 flex items-center justify-center text-sm font-bold text-green-700 dark:text-green-300">
+                                                         {req.fromUser?.name?.charAt(0) || '?'}
+                                                     </div>
+                                                     <span className="text-sm font-medium text-slate-800 dark:text-white">{req.fromUser?.name}</span>
+                                                 </div>
+                                                 <div className="flex gap-1">
+                                                     <button onClick={() => acceptPeerRequest(req)} className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-lg">Accept</button>
+                                                     <button onClick={() => rejectPeerRequest(req)} className="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-lg">Reject</button>
+                                                 </div>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 )}
                                  
                                  <div className="space-y-3">
                                      {peers.map(peer => (
@@ -440,7 +564,14 @@ const Chat = () => {
                             <motion.div initial={{scale:0.95}} animate={{scale:1}} className="bg-white w-full h-full max-w-6xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl relative">
                                 <div className="p-4 border-b flex justify-between items-center bg-slate-50">
                                     <div className="flex items-center gap-4">
-                                        <h3 className="font-bold text-lg flex items-center gap-2">🎨 Collaborative Whiteboard</h3>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setWhiteboardMode('whiteboard')} className={`px-3 py-1 rounded-lg text-sm font-bold transition-colors ${whiteboardMode === 'whiteboard' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                                <PenTool size={14} className="inline mr-1" /> Whiteboard
+                                            </button>
+                                            <button onClick={() => setWhiteboardMode('code')} className={`px-3 py-1 rounded-lg text-sm font-bold transition-colors ${whiteboardMode === 'code' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                                <Code size={14} className="inline mr-1" /> Code-With-Me
+                                            </button>
+                                        </div>
                                         {activeCall && (
                                             <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
                                                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Call Active
@@ -457,22 +588,61 @@ const Chat = () => {
                                          </button>
                                          <button className="p-2 hover:bg-purple-100 text-purple-600 rounded-full transition-colors" title="Share Screen"><Monitor size={20}/></button>
                                          <div className="h-6 w-px bg-slate-300 mx-1"></div>
-                                         <button onClick={() => {setShowWhiteboard(false); setActiveCall(false);}} className="p-2 hover:bg-red-100 text-red-500 rounded-full transition-colors"><X size={24}/></button>
+                                         <button onClick={() => {setShowWhiteboard(false); setActiveCall(false); setCodeOutput('');}} className="p-2 hover:bg-red-100 text-red-500 rounded-full transition-colors"><X size={24}/></button>
                                     </div>
                                 </div>
-                                <div className="relative flex-1">
-                                    <iframe src="https://excalidraw.com" className="w-full h-full border-0" title="Whiteboard" allow="clipboard-read; clipboard-write"></iframe>
-                                    
-                                    {/* Video Draggable (Bottom Right) */}
-                                    {activeCall && (
-                                        <motion.div 
-                                            drag
-                                            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                                            className="absolute bottom-4 right-4 w-48 h-36 bg-black rounded-xl shadow-2xl overflow-hidden border-2 border-white/20 z-10 cursor-move"
-                                        >
-                                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 rounded-full text-[10px] text-white backdrop-blur-sm z-20">You</div>
-                                            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
-                                        </motion.div>
+                                <div className="relative flex-1 flex flex-col">
+                                    {whiteboardMode === 'whiteboard' ? (
+                                        <>
+                                            <iframe src="https://excalidraw.com" className="w-full h-full border-0" title="Whiteboard" allow="clipboard-read; clipboard-write"></iframe>
+                                            {activeCall && (
+                                                <motion.div 
+                                                    drag
+                                                    dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                                                    className="absolute bottom-4 right-4 w-48 h-36 bg-black rounded-xl shadow-2xl overflow-hidden border-2 border-white/20 z-10 cursor-move"
+                                                >
+                                                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 rounded-full text-[10px] text-white backdrop-blur-sm z-20">You</div>
+                                                    <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
+                                                </motion.div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="flex-1 flex flex-col p-4 bg-slate-900">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <select value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)} className="px-3 py-1 bg-slate-800 text-white rounded-lg border border-slate-700 text-sm">
+                                                    <option value="javascript">JavaScript</option>
+                                                    <option value="python">Python</option>
+                                                    <option value="cpp">C++</option>
+                                                    <option value="java">Java</option>
+                                                </select>
+                                                <button onClick={runCode} className="px-4 py-1 bg-green-600 text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-green-700">
+                                                    <Play size={14} /> Run
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                value={codeContent}
+                                                onChange={(e) => setCodeContent(e.target.value)}
+                                                placeholder={`Write ${codeLanguage} code here...`}
+                                                className="flex-1 w-full p-4 bg-slate-950 text-green-400 font-mono text-sm rounded-lg border border-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                spellCheck={false}
+                                            />
+                                            {codeOutput && (
+                                                <div className="mt-2 p-3 bg-slate-800 text-white rounded-lg border border-slate-700 font-mono text-sm">
+                                                    <div className="text-xs text-slate-400 mb-1">Output:</div>
+                                                    {codeOutput}
+                                                </div>
+                                            )}
+                                            {activeCall && (
+                                                <motion.div 
+                                                    drag
+                                                    dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                                                    className="absolute bottom-4 right-4 w-48 h-36 bg-black rounded-xl shadow-2xl overflow-hidden border-2 border-white/20 z-10 cursor-move"
+                                                >
+                                                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/50 rounded-full text-[10px] text-white backdrop-blur-sm z-20">You</div>
+                                                    <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
+                                                </motion.div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </motion.div>

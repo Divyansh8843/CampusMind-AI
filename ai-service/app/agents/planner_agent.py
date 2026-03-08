@@ -1,15 +1,17 @@
-from langchain_ollama import OllamaLLM
+from app.rag.rag_chain import get_llm
 from langchain_core.prompts import PromptTemplate
 import json
 
-# Use Ollama for local LLM
-llm = OllamaLLM(model="llama2", temperature=0.7)
-
-def generate_study_plan(topic_or_syllabus: str):
+def generate_study_plan(state: dict):
     """
     Generates a study schedule based on the provided topics or syllabus.
     """
     try:
+        topic_or_syllabus = state.get("query", "")
+        llm_engine = get_llm()
+
+        if not llm_engine:
+             return {"response": "AI Brain is offline. Please start Ollama or provide an OpenAI API Key."}
         template = """
         You are an intelligent AI Study Planner.
         Your goal is to create a structured study schedule based on the student's syllabus or topics.
@@ -28,7 +30,7 @@ def generate_study_plan(topic_or_syllabus: str):
         
         prompt = PromptTemplate(template=template, input_variables=["topics"])
         final_prompt = prompt.format(topics=topic_or_syllabus)
-        response = llm.invoke(final_prompt)
+        response = llm_engine.invoke(final_prompt)
         
         if isinstance(response, str):
             return {"response": response}

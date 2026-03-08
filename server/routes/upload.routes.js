@@ -6,20 +6,29 @@ import Document from "../models/Document.js";
 import Log from "../models/Log.js";
 import authMiddleware from "../middleware/auth.js";
 import redisClient from "../config/redis.js";
-import upload from "../config/s3.js"; // IMPORT S3 UPLOADER
-import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import upload, { s3 } from "../config/s3.js"; // IMPORT S3 UPLOADER & CLIENT
+import { DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const router = express.Router();
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
-  credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  }
-});
-
 const CACHE_TTL = 3600;
+
+// Helper to generate S3 Presigned URL for viewing
+const generatePresignedUrl = async (key) => {
+    try {
+        if (!key) return null;
+        const command = new GetObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key,
+        });
+        // URL valid for 1 hour
+        return await getSignedUrl(s3, command, { expiresIn: 3600 });
+    } catch (err) {
+        console.error("Presigned URL Error:", err);
+        return null;
+    }
+};
 
 // GET /api/upload/stats - Admin Only
 router.get("/stats", authMiddleware, async (req, res) => {
@@ -210,8 +219,14 @@ router.get("/all", authMiddleware, async (req, res) => {
           }
       ]);
 
-      const documents = result[0].data;
+      const documentsRaw = result[0].data;
       const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+
+      // Generate Presigned URLs for each document
+      const documents = await Promise.all(documentsRaw.map(async doc => ({
+          ...doc,
+          viewUrl: await generatePresignedUrl(doc.filename) || doc.url
+      })));
 
       res.status(200).json({ 
           success: true, 
@@ -266,7 +281,10 @@ router.get("/", authMiddleware, async (req, res) => {
     
     const response = { 
         success: true, 
-        documents, 
+        documents: await Promise.all(documents.map(async doc => ({
+            ...doc.toObject(),
+            viewUrl: await generatePresignedUrl(doc.filename) || doc.url
+        }))), 
         pagination: {
             page,
             limit,

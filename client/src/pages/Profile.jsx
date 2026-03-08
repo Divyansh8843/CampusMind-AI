@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { User, Save, Book, Calendar, CreditCard, Building, CheckCircle, Camera, ShieldCheck, Github, Linkedin, Code } from 'lucide-react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { User, Users, Activity, Save, Book, Calendar, CreditCard, Building, CheckCircle, Camera, ShieldCheck, Github, Linkedin, Code, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Profile = () => {
+    const navigate = useNavigate();
     const [userData, setUserData] = useState({
         name: '',
         email: '',
@@ -16,7 +18,8 @@ const Profile = () => {
         role: 'student',
         github: '',
         linkedin: '',
-        skills: ''
+        skills: '',
+        company: ''
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -151,16 +154,21 @@ const Profile = () => {
                                         <User size={60} className="text-slate-300" />
                                     </div>
                                 )}
-                                
-                                {/* Camera Upload Overlay */}
-                                <div 
-                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl cursor-pointer" 
-                                    onClick={startCamera}
-                                >
-                                    <span className="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full border border-white/50 flex items-center gap-1">
-                                        <Camera size={14}/> Take Selfie
-                                    </span>
-                                </div>
+                                                                {/* Camera Upload Overlay - Only if not updated before */}
+                                 {!userData.profilePictureUpdated ? (
+                                    <div 
+                                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl cursor-pointer" 
+                                        onClick={startCamera}
+                                    >
+                                        <span className="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full border border-white/50 flex items-center gap-1">
+                                            <Camera size={14}/> Take Selfie
+                                        </span>
+                                    </div>
+                                 ) : (
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <ShieldCheck className="text-green-500 bg-white dark:bg-slate-900 rounded-full" size={20} />
+                                    </div>
+                                 )}
                              </div>
                          </div>
 
@@ -169,17 +177,17 @@ const Profile = () => {
 
                          <div className="flex justify-center gap-2 mb-6">
                             <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold uppercase tracking-wider">
-                                {userData.role}
+                                {userData.role === 'admin' ? '🛡️ System Administrator' : userData.role}
                             </span>
-                             {userData.enrollment && (
+                              {userData.role === 'student' && userData.enrollment && (
                                 <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold">
                                     {userData.enrollment}
                                 </span>
-                             )}
+                              )}
                          </div>
 
-                         {/* Skills Tags */}
-                         {userData.skills && (
+                         {/* Skills Tags - Student Only */}
+                         {userData.role === 'student' && userData.skills && (
                              <div className="flex flex-wrap justify-center gap-2 mb-6">
                                  {(Array.isArray(userData.skills) ? userData.skills : String(userData.skills).split(',')).map((skill, idx) => (
                                      skill.trim() && (
@@ -192,11 +200,11 @@ const Profile = () => {
                          )}
 
                          <div className="flex justify-around pt-6 border-t border-slate-100 dark:border-white/10">
-                             {userData.github && (
-                                 <a href={userData.github} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-black dark:hover:text-white transition-colors"><Github/></a>
+                             {(userData.github || userData.role === 'student') && (
+                                 <a href={userData.github || '#'} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-black dark:hover:text-white transition-colors"><Github/></a>
                              )}
-                             {userData.linkedin && (
-                                 <a href={userData.linkedin} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-600 transition-colors"><Linkedin/></a>
+                             {(userData.linkedin || userData.role === 'student') && (
+                                 <a href={userData.linkedin || '#'} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-600 transition-colors"><Linkedin/></a>
                              )}
                          </div>
                     </div>
@@ -239,11 +247,11 @@ const Profile = () => {
                                             value={userData.enrollment || ''}
                                             onChange={handleChange}
                                             placeholder="0901CS......"
-                                            disabled={!!userData.enrollment} 
+                                            disabled={true} 
                                             className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none font-mono text-slate-900 dark:text-white placeholder-slate-400 disabled:opacity-60 disabled:cursor-not-allowed"
                                         />
                                         <p className="text-xs text-slate-400 mt-2">
-                                            {userData.enrollment ? "Locked mainly." : "Enter Official ID"}
+                                            Official ID is locked for security.
                                         </p>
                                     </div>
                                     <div className="group">
@@ -286,48 +294,142 @@ const Profile = () => {
                                 </div>
                             )}
 
-                            {/* Skills & Socials Section */}
-                            <div className={`col-span-full ${userData.role === 'student' ? 'md:col-span-1' : ''} space-y-6`}>
-                                <h3 className="font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-white/10 pb-2">Professional</h3>
-                                <div className="group">
-                                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                        <Github size={18} className="text-slate-800 dark:text-white" /> GitHub URL
-                                    </label>
-                                    <input 
-                                        type="text" 
-                                        name="github"
-                                        value={userData.github || ''}
-                                        onChange={handleChange}
-                                        placeholder="https://github.com/..."
-                                        className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-slate-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400"
-                                    />
+                            {/* Student Professional Section */}
+                            {userData.role === 'student' && (
+                                <div className="col-span-full md:col-span-1 space-y-6">
+                                    <h3 className="font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-white/10 pb-2">Professional</h3>
+                                    <div className="group">
+                                        <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                            <Github size={18} className="text-slate-800 dark:text-white" /> GitHub URL
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            name="github"
+                                            value={userData.github || ''}
+                                            onChange={handleChange}
+                                            placeholder="https://github.com/..."
+                                            className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-slate-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400"
+                                        />
+                                    </div>
+                                    <div className="group">
+                                        <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                            <Linkedin size={18} className="text-blue-600" /> LinkedIn URL
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            name="linkedin"
+                                            value={userData.linkedin || ''}
+                                            onChange={handleChange}
+                                            placeholder="https://linkedin.com/in/..."
+                                            className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400"
+                                        />
+                                    </div>
+                                    <div className="group">
+                                        <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                            <Code size={18} className="text-green-500" /> Skills (comma separated)
+                                        </label>
+                                        <textarea 
+                                            name="skills"
+                                            value={Array.isArray(userData.skills) ? userData.skills.join(', ') : (userData.skills || '')}
+                                            onChange={handleChange}
+                                            placeholder="React, Node.js, Python, Leadership..."
+                                            className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-green-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400 h-32 resize-none"
+                                        />
+                                    </div>
+                                    <div className="group">
+                                        <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                            <Briefcase size={18} className="text-amber-500" /> Company (e.g. for alumni)
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            name="company"
+                                            value={userData.company || ''}
+                                            onChange={handleChange}
+                                            placeholder="Google, Microsoft, ..."
+                                            className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-amber-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="group">
-                                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                        <Linkedin size={18} className="text-blue-600" /> LinkedIn URL
-                                    </label>
-                                    <input 
-                                        type="text" 
-                                        name="linkedin"
-                                        value={userData.linkedin || ''}
-                                        onChange={handleChange}
-                                        placeholder="https://linkedin.com/in/..."
-                                        className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400"
-                                    />
+                            )}
+
+                            {/* Admin Specialized Section */}
+                            {userData.role === 'admin' && (
+                                <div className="col-span-full space-y-8">
+                                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-4">
+                                        <h3 className="font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
+                                            <ShieldCheck className="text-red-500" size={24} /> Admin Privileges & System Control
+                                        </h3>
+                                        <span className="px-4 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold uppercase tracking-widest border border-red-200 dark:border-red-500/20">
+                                            Verified Operator
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all">
+                                            <div className="p-3 bg-red-50 dark:bg-red-500/10 rounded-xl text-red-600 dark:text-red-400 w-fit mb-4"><ShieldCheck size={28}/></div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">Access Level</div>
+                                            <div className="text-lg font-bold text-slate-900 dark:text-white">Super Admin</div>
+                                        </div>
+                                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all">
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400 w-fit mb-4"><CheckCircle size={28}/></div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">System Health</div>
+                                            <div className="text-lg font-bold text-slate-900 dark:text-white">100% Stable</div>
+                                        </div>
+                                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all">
+                                            <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-400 w-fit mb-4"><Users size={28}/></div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">Global Scope</div>
+                                            <div className="text-lg font-bold text-slate-900 dark:text-white">All Branches</div>
+                                        </div>
+                                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all">
+                                            <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-xl text-orange-600 dark:text-orange-400 w-fit mb-4"><Building size={28}/></div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">HQ Location</div>
+                                            <div className="text-lg font-bold text-slate-900 dark:text-white">Main Office</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                            <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                                                <Calendar size={18} className="text-blue-500" /> Security Log
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center text-sm p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-white/5">
+                                                    <span className="text-slate-600 dark:text-slate-300">Last Password Change</span>
+                                                    <span className="font-mono text-xs text-slate-500">12 days ago</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-white/5">
+                                                    <span className="text-slate-600 dark:text-slate-300">2FA Status</span>
+                                                    <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded">Enabled</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-white/5">
+                                                    <span className="text-slate-600 dark:text-slate-300">Authorized IP</span>
+                                                    <span className="font-mono text-xs text-slate-500">Static (Campus LAN)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                            <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                                                <Activity size={18} className="text-purple-500" /> Admin Fast Actions
+                                            </h4>
+                                             <div className="grid grid-cols-2 gap-3">
+                                                <button type="button" onClick={() => navigate('/admin')} className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20">
+                                                    Admin Dashboard
+                                                </button>
+                                                <button type="button" onClick={() => navigate('/admin/documents')} className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-slate-800/20">
+                                                    Review All Docs
+                                                </button>
+                                                <button type="button" onClick={() => navigate('/admin/audit')} className="p-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">
+                                                    System Audit
+                                                </button>
+                                                <button type="button" onClick={() => navigate('/admin')} className="p-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all">
+                                                    Student Overview
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="group">
-                                    <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                        <Code size={18} className="text-green-500" /> Skills (comma separated)
-                                    </label>
-                                    <textarea 
-                                        name="skills"
-                                        value={Array.isArray(userData.skills) ? userData.skills.join(', ') : (userData.skills || '')}
-                                        onChange={handleChange}
-                                        placeholder="React, Node.js, Python, Leadership..."
-                                        className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-green-500 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400 h-32 resize-none"
-                                    />
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         <div className="px-8 py-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-white/10 flex items-center justify-end">

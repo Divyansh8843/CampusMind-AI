@@ -23,6 +23,7 @@ import Footer from '../components/Footer';
 
 const Landing = () => {
     const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     const isLoggedIn = !!localStorage.getItem('token');
 
     return (
@@ -53,12 +54,22 @@ const Landing = () => {
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             {isLoggedIn ? (
-                                <NavLink 
-                                    to="/dashboard" 
-                                    className="px-8 py-4 rounded-full text-lg font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2"
-                                >
-                                    Go to Dashboard <ArrowRight size={20} />
-                                </NavLink>
+                                <>
+                                    <NavLink 
+                                        to={user?.role === 'admin' ? '/admin' : '/dashboard'} 
+                                        className="px-8 py-4 rounded-full text-lg font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2"
+                                    >
+                                        {user?.role === 'admin' ? 'Admin Console' : 'Go to Dashboard'} <ArrowRight size={20} />
+                                    </NavLink>
+                                    {user?.role === 'admin' && (
+                                        <NavLink 
+                                            to="/admin/documents" 
+                                            className="px-8 py-4 rounded-full text-lg font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2 border border-white/10"
+                                        >
+                                            <FileText size={20} /> Manage Resources
+                                        </NavLink>
+                                    )}
+                                </>
                             ) : (
                                 <NavLink 
                                     to="/login" 
@@ -67,12 +78,14 @@ const Landing = () => {
                                     Student Login <ArrowRight size={20} />
                                 </NavLink>
                             )}
-                            <NavLink 
-                                to="/pricing" 
-                                className="px-8 py-4 rounded-full text-lg font-semibold bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:scale-105 transition-all shadow-lg flex items-center gap-2"
-                            >
-                                <Sparkles size={20} className="fill-white"/> View Plans
-                            </NavLink>
+                            {(!isLoggedIn || user?.role !== 'admin') && (
+                                <NavLink 
+                                    to="/pricing" 
+                                    className="px-8 py-4 rounded-full text-lg font-semibold bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+                                >
+                                    <Sparkles size={20} className="fill-white"/> View Plans
+                                </NavLink>
+                            )}
                         </div>
                     </motion.div>
                 </div>
@@ -93,9 +106,9 @@ const Landing = () => {
                         <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20" />
 
                          {[
-                             { title: "Upload", icon: FileText, desc: "Upload your PDFs, lecture notes, or syllabus directly to the portal." },
-                             { title: "Index", icon: Layers, desc: "Our AI automatically analyzes, chunks, and indexes your content." },
-                             { title: "Learn", icon: Brain, desc: "Ask questions and get instant, accurate answers from your own data." }
+                             { title: "Upload Securely", icon: FileText, desc: "Upload PDFs and notes. Files immediately go to your private, self-hosted vault." },
+                             { title: "Local Vector Index", icon: Layers, desc: "Our offline ML models automatically chunk and index your content into ChromaDB." },
+                             { title: "Agentic Learning", icon: Brain, desc: "Chat with the local LLM to get instant answers drawn perfectly from your vectors." }
                          ].map((step, idx) => (
                              <div key={idx} className="relative flex flex-col items-center text-center z-10">
                                  <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center mb-6 shadow-xl relative group">
@@ -119,9 +132,9 @@ const Landing = () => {
             <section id="features" className="py-24 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/5">
                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl font-bold mb-4 text-slate-900 dark:text-white">Advanced AI Features</h2>
+                        <h2 className="text-3xl font-bold mb-4 text-slate-900 dark:text-white">Features</h2>
                         <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                           Built with cutting-edge technology including RAG, Vector Databases, and Agentic AI.
+                           Powered by pure Local ML and GenAI RAG Fundamentals. Zero reliance on OpenAI or external APIs. Total privacy, maximum power.
                         </p>
                     </div>
                     
@@ -129,38 +142,33 @@ const Landing = () => {
                         {[
                              {
                                 icon: BookOpen,
-                                title: "Document Analysis",
-                                desc: "Supports PDF, DOCX, and TXT. Extracts text and understands context."
+                                title: "Local Generative RAG",
+                                desc: "Understands your PDFs natively. Uses Local LLMs and HuggingFace chunks with zero external API calls."
                             },
                             {
                                 icon: ShieldCheck,
-                                title: "Hallucination Free",
-                                desc: "RAG technology ensures the AI only answers using facts from your uploaded documents."
+                                title: "Total Data Privacy",
+                                desc: "Your resumes, syllabus files, and chats never leave the server. True sovereign machine learning."
                             },
                             {
                                 icon: Users,
-                                title: "Agentic Workflow",
-                                desc: "Powered by LangGraph to make intelligent decisions on how to answer queries."
+                                title: "Global Peer Match",
+                                desc: "Find students studying your exact topic worldwide. Features real-time video and shared whiteboards."
                             },
                              {
                                 icon: Zap,
-                                title: "Instant Retrieval",
-                                desc: "Vector embeddings allow for millisecond-latency search across thousands of pages."
-                            },
-                             {
-                                icon: Code,
-                                title: "Modern Stack",
-                                desc: "Built using MERN Stack + Python Microservice for maximum scalability."
+                                title: "Real-time Live Scrapers",
+                                desc: "Aggregates live hackathons, jobs, and internships globally from unstop, internshala, and more."
                             },
                              {
                                 icon: CheckCircle,
-                                title: "Mock Interviewer",
-                                desc: "Practice technical interviews with an AI bot that gives real-time feedback."
+                                title: "FAANG Mock Interviews",
+                                desc: "Extremely rigorous AI video interviews that enforce real-world MNC systems-design constraints."
                             },
                              {
                                 icon: FileText,
-                                title: "Resume Analyzer",
-                                desc: "Get instant scores and improvement tips for your resume against any JD."
+                                title: "Project Genesis & Planner",
+                                desc: "Automatically breaks down uploaded notes into weekly study plans and generates resume-ready projects."
                             }
                         ].map((feature, idx) => (
                              <div key={idx} className="p-8 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 hover:border-blue-500/30 transition-all hover:bg-white dark:hover:bg-white/10 hover:shadow-xl dark:hover:shadow-none">
@@ -186,10 +194,10 @@ const Landing = () => {
 
                     <div className="space-y-4">
                         {[
-                            { q: "Is this tool free for students?", a: "Yes. Free tier includes 3 AI resume scans and 3 mock interviews. Premium plans unlock unlimited access." },
-                            { q: "How accurate is the AI?", a: "We use RAG (Retrieval Augmented Generation) to ensure the AI answers ONLY from your uploaded documents, minimizing hallucinations." },
-                            { q: "Can I upload handwritten notes?", a: "Currently we support PDF and DOCX text. OCR for handwriting is coming in v3.0." },
-                            { q: "Is my data secure?", a: "Absolutely. Your documents are stored in a private vector database and are not shared." }
+                            { q: "Is my data sent to OpenAI or ChatGPT?", a: "NO. CampusMind AI operates on a strictly 100% Local Agentic ML foundation. We use sovereign locally-hosted models (like Ollama and HuggingFace vectors). Your data never touches a 3rd party API." },
+                            { q: "How do the Mock Interviews work?", a: "Our AI assumes the role of a strict FAANG/MNC Senior Engineer. It expects deep domain knowledge, code optimization, and highly specific algorithm logic in a real-time voice setting." },
+                            { q: "Is the job/hackathon data real?", a: "Yes. Our platform uses live scrapers to aggregate the newest tech opportunities and hackathons globally, right as they are posted on sites like Unstop or Internshala." },
+                            { q: "How does the AI Study RAG work?", a: "When you upload a PDF, we locally vectorize the data into ChromaDB. When you chat, our Agentic Engine accesses those EXACT mathematical vectors to guarantee zero hallucinations." }
                         ].map((faq, i) => (
                             <details key={i} className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden">
                                 <summary className="flex cursor-pointer items-center justify-between p-6 font-medium text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors list-none select-none">
@@ -229,10 +237,10 @@ const Landing = () => {
                     </p>
                     {isLoggedIn ? (
                         <NavLink 
-                            to="/dashboard" 
+                            to={user?.role === 'admin' ? '/admin' : '/dashboard'} 
                             className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white text-blue-900 font-bold hover:bg-blue-50 transition-all shadow-xl hover:scale-105"
                         >
-                            Go to Dashboard <ArrowRight size={20} />
+                            {user?.role === 'admin' ? 'Admin Console' : 'Go to Dashboard'} <ArrowRight size={20} />
                         </NavLink>
                     ) : (
                         <NavLink 

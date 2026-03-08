@@ -76,12 +76,16 @@ router.post("/", authMiddleware, async (req, res) => {
 
       // 1. Call Python AI Service
       try {
-          const aiResponse = await axios.post('http://localhost:8000/chat', {
+          const aiUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+          const aiResponse = await axios.post(`${aiUrl}/chat`, {
               message: message,
               type: type
           });
 
-          const finalResponse = aiResponse.data.response || "I'm having trouble connecting to my brain.";
+          let finalResponse = aiResponse.data.response || "I'm having trouble connecting to my brain.";
+          if (finalResponse !== null && typeof finalResponse === 'object') {
+              finalResponse = finalResponse.content || JSON.stringify(finalResponse);
+          }
 
           // 2. Save User Message
           await Chat.create({

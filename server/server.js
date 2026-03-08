@@ -1,6 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -18,8 +20,9 @@ import jobsRoutes from "./routes/jobs.routes.js";
 import hackathonRoutes from "./routes/hackathon.routes.js";
 import studyRoutes from "./routes/study.routes.js";
 import communityRoutes from "./routes/community.routes.js";
-
-dotenv.config();
+import peersRoutes from "./routes/peers.routes.js";
+import syllabusRoutes from "./routes/syllabus.routes.js";
+import metaRoutes from "./routes/meta.routes.js";
 
 const app = express();
 
@@ -41,7 +44,7 @@ import paymentRoutes from "./routes/payment.routes.js";
 // 3. Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 10000,
   message: "Too many requests from this IP, please try again later."
 });
 app.use("/api/", limiter);
@@ -66,7 +69,9 @@ app.use("/api/jobs", jobsRoutes);
 app.use("/api/hackathons", hackathonRoutes);
 app.use("/api/study", studyRoutes);
 app.use("/api/community", communityRoutes);
-
+app.use("/api/peers", peersRoutes);
+app.use("/api/syllabus", syllabusRoutes);
+app.use("/api/meta", metaRoutes);
 // 5. Robust Error Handling
 app.use((err, req, res, next) => {
   console.error("Server Error:", err.stack);

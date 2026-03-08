@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Briefcase, 
   MapPin, 
@@ -12,7 +12,10 @@ import {
   CheckCircle,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  RefreshCw,
+  X
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -26,6 +29,12 @@ const Jobs = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterSource, setFilterSource] = useState("all");
     const [userSkills, setUserSkills] = useState([]);
+
+    // Job Description modal + AI Rewrite
+    const [jdModalOpen, setJdModalOpen] = useState(false);
+    const [selectedJob, setSelectedJob] = useState(null);
+    const [jdText, setJdText] = useState("");
+    const [rewritingJD, setRewritingJD] = useState(false);
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
@@ -106,6 +115,32 @@ const Jobs = () => {
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= pagination.pages) {
             setPagination(prev => ({ ...prev, page: newPage }));
+        }
+    };
+
+    const openJdModal = (job) => {
+        setSelectedJob(job);
+        setJdText(job.description || job.desc || "No description available.");
+        setJdModalOpen(true);
+    };
+
+    const handleRewriteJD = async () => {
+        if (!jdText.trim()) return;
+        setRewritingJD(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.post(`${API_BASE_URL}/api/chat`, {
+                message: `Rewrite the following Job Description to be more professional, clear, and structured. Use headings: Role, Key Responsibilities, Requirements, Benefits. Keep the same meaning:\n\n${jdText}`,
+                type: 'general'
+            }, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.data.response) {
+                setJdText(res.data.response);
+                toast.success("Job description rewritten with AI!");
+            } else throw new Error("No response");
+        } catch (err) {
+            toast.error("Rewrite failed. Try again.");
+        } finally {
+            setRewritingJD(false);
         }
     };
 
@@ -239,7 +274,14 @@ const Jobs = () => {
                                         </div>
                                     </div>
 
-                                    <div className="mt-auto">
+                                    <div className="mt-auto flex flex-col gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => openJdModal(job)}
+                                            className="w-full py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <FileText size={16} /> View / Rewrite JD with AI
+                                        </button>
                                         <a 
                                             href={job.url || job.link} 
                                             target="_blank" 
@@ -289,6 +331,28 @@ const Jobs = () => {
                     </div>
                 )}
             </div>
+
+            {/* Job Description Modal with AI Rewrite */}
+            <AnimatePresence>
+                {jdModalOpen && selectedJob && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setJdModalOpen(false)}>
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="p-4 border-b border-slate-200 dark:border-white/10 flex justify-between items-center">
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-white">{selectedJob.title} – Job Description</h3>
+                                <button onClick={() => setJdModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><X size={20}/></button>
+                            </div>
+                            <div className="p-4 flex-1 overflow-y-auto">
+                                <div className="flex justify-end mb-2">
+                                    <button onClick={handleRewriteJD} disabled={rewritingJD} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50">
+                                        {rewritingJD ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>} Rewrite with AI
+                                    </button>
+                                </div>
+                                <textarea className="w-full h-64 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 text-sm resize-none" value={jdText} onChange={e => setJdText(e.target.value)} placeholder="Job description..." />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

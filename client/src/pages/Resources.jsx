@@ -118,8 +118,8 @@ const Resources = () => {
     }
 
     const downloadDocument = (doc) => {
-        // Use S3 URL if available, otherwise fallback to local (legacy)
-        const url = doc.url || `${API_BASE_URL}/uploads/${doc.filename}`;
+        // Use Presigned View URL if available, otherwise fallback to URL or legacy local
+        const url = doc.viewUrl || doc.url || `${API_BASE_URL}/uploads/${doc.filename}`;
         window.open(url, '_blank');
     };
 

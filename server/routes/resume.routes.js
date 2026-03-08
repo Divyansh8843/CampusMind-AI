@@ -58,7 +58,7 @@ const analyzeResumeLocally = (resumeText, jdText) => {
 
 // Multer Setup for Memory Storage
 import multer from "multer";
-import pdf from "pdf-parse";
+
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -71,10 +71,11 @@ router.post("/upload", authMiddleware, upload.single('resume'), checkUsageLimit(
         let resumeText = "";
 
         // Parse PDF
-        if (req.file.mimetype === 'application/pdf') {
-            const data = await pdf(req.file.buffer);
-            resumeText = data.text;
-        } else {
+       if (req.file.mimetype === 'application/pdf') {
+    const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+    const data = await pdfParse(req.file.buffer);
+    resumeText = data.text;
+} else {
             // Assume text/plain
             resumeText = req.file.buffer.toString('utf8');
         }

@@ -58,6 +58,7 @@ const UserSchema = new mongoose.Schema({
   // Social Links
   github: { type: String, default: '' },
   linkedin: { type: String, default: '' },
+  company: { type: String, default: '' },
   // Gamification
   xp: { type: Number, default: 0 },
   level: { type: Number, default: 1 },

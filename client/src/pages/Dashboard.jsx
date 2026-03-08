@@ -18,8 +18,10 @@ import {
   Users,
   Briefcase,
   Calendar,
-  Code
+  Code,
+  Rocket
 } from 'lucide-react';
+
 import { motion } from 'framer-motion';
 
 const Dashboard = () => {
@@ -288,7 +290,7 @@ const Dashboard = () => {
 
                 {/* Sidebar Widgets (Desktop) */}
                 <div className="space-y-6">
-                    {/* System Status Widget (Real Static Info) */}
+                    {/* System Status Widget */}
                      <motion.div variants={item} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-6 shadow-sm dark:shadow-none">
                         <div className="flex items-center gap-2 mb-4">
                             <Server size={20} className="text-slate-500 dark:text-slate-400" />
@@ -335,6 +337,33 @@ const Dashboard = () => {
                              Start Mock Interview
                         </NavLink>
                     </motion.div>
+                    {/* Future Innovations (Phase 2) */}
+                    <NavLink to="/advanced">
+                        <motion.div variants={item} whileHover={{ scale: 1.02 }} className="bg-slate-900 text-white rounded-2xl p-6 shadow-lg relative overflow-hidden mt-6 cursor-pointer group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-purple-500/30 transition-all"></div>
+                            <h3 className="font-bold mb-4 flex items-center gap-2 relative z-10">
+                                <Rocket size={20} className="text-purple-400 group-hover:animate-pulse" /> Phase 2 Innovation Lab
+                            </h3>
+                            <ul className="space-y-3 relative z-10 text-left">
+                                <li className="flex items-center gap-3 text-sm text-slate-300">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div> Smart Syllabus Tracker
+                                </li>
+                                <li className="flex items-center gap-3 text-sm text-slate-300">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div> Salary Negotiator Bot
+                                </li>
+                                <li className="flex items-center gap-3 text-sm text-slate-300">
+                                     <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div> Hackathon Squad Builder
+                                </li>
+                                 <li className="flex items-center gap-3 text-sm text-slate-300">
+                                     <div className="w-1.5 h-1.5 rounded-full bg-pink-400"></div> Voice AI Interviewer
+                                </li>
+                            </ul>
+                            <div className="mt-4 pt-4 border-t border-white/10 text-xs text-purple-300 font-bold flex items-center justify-between">
+                                <span>Experimental Access Unlocked</span>
+                                <ArrowRight size={14} />
+                            </div>
+                        </motion.div>
+                    </NavLink>
                 </div>
             </div>
         </motion.div>

@@ -39,14 +39,14 @@ router.post("/aptitude", authMiddleware, async (req, res) => {
     }
 });
 
-// POST /api/interview/feedback - Generate & Save Mock Interview Result
-// This is the "End Interview" step, so we count usage here.
+// POST /api/interview/feedback - Generate & Save Mock Interview Result (with optional voice transcript for filler analysis)
 router.post("/feedback", authMiddleware, checkUsageLimit('interview'), async (req, res) => {
     try {
-        const { history, topic } = req.body;
+        const { history, topic, user_transcript } = req.body;
         const response = await axios.post(process.env.AI_SERVICE_URL + "/feedback", {
             history,
-            topic
+            topic,
+            user_transcript: user_transcript || ""
         });
         
         await incrementUsage(req.user.userId, 'interview');

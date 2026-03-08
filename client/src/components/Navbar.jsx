@@ -29,10 +29,10 @@ const Navbar = () => {
     const isLanding = location.pathname === '/';
 
     // Helper for anchor links
-    const LinkItem = ({ to, children, mobile, isRouterLink }) => {
+    const LinkItem = ({ to, children, mobile, isRouterLink, className = "" }) => {
         const baseClass = mobile
-            ? "block text-slate-600 dark:text-slate-300 font-medium py-2"
-            : "text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors";
+            ? `block text-slate-600 dark:text-slate-300 font-medium py-2 ${className}`
+            : `text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${className}`;
         
         const activeClass = "text-blue-600 dark:text-blue-400 font-semibold";
 
@@ -79,8 +79,8 @@ const Navbar = () => {
                 <div className="flex items-center h-16 relative">
                     {/* LEFT: Logo */}
                     <div className="flex-shrink-0 flex items-center justify-start gap-2 mr-auto">
-                        <NavLink to="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <NavLink to={!isLoggedIn ? "/" : (user?.role === 'admin' ? "/admin" : "/dashboard")} className="flex items-center gap-2 group">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
                                 <Brain className="w-5 h-5 text-white" />
                             </div>
                             <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300">
@@ -93,24 +93,30 @@ const Navbar = () => {
                     <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-6">
                         <LinkItem to="/" isRouterLink>Home</LinkItem>
                         
-                        {isLoggedIn ? (
-                            user?.role === 'admin' ? (
-                                <>
-                                    <LinkItem to="/admin" isRouterLink>Admin Console</LinkItem>
-                                    <LinkItem to="/profile" isRouterLink>Profile</LinkItem>
-                                </>
-                            ) : (
-                                <>
-                                    <LinkItem to="/chat" isRouterLink>AI Chat</LinkItem>
-                                    <LinkItem to="/planner" isRouterLink>Planner</LinkItem>
-                                    <LinkItem to="/jobs" isRouterLink>Jobs</LinkItem>
-                                    <LinkItem to="/hackathons" isRouterLink>Hackathons</LinkItem>
-                                    <LinkItem to="/resume" isRouterLink>Resume</LinkItem>
-                                    <LinkItem to="/interview" isRouterLink>Interview</LinkItem>
-                                    <LinkItem to="/community" isRouterLink>Community</LinkItem>
-                                </>
-                            )
-                        ) : (
+                        {isLoggedIn && (
+                            <>
+                                {user?.role === 'admin' ? (
+                                    <>
+                                        <LinkItem to="/admin" isRouterLink>Console</LinkItem>
+                                        <LinkItem to="/community" isRouterLink>Community</LinkItem>
+                                        <LinkItem to="/admin/documents" isRouterLink>Vault</LinkItem>
+                                        <LinkItem to="/admin/audit" isRouterLink>Audit Logs</LinkItem>
+                                    </>
+                                ) : (
+                                    <>
+                                        <LinkItem to="/dashboard" isRouterLink>Dashboard</LinkItem>
+                                        <LinkItem to="/meta-campus" isRouterLink>Lobby</LinkItem>
+                                        <LinkItem to="/chat" isRouterLink> Chat</LinkItem>
+                                        <LinkItem to="/jobs" isRouterLink>Jobs </LinkItem>
+                                        <LinkItem to="/hackathons" isRouterLink className="hidden xl:block">Hackathons</LinkItem>
+                                        <LinkItem to="/interview" isRouterLink className="hidden xl:block">Interview</LinkItem>
+                                        <LinkItem to="/community" isRouterLink>Community</LinkItem>
+                                        <LinkItem to="/resume" isRouterLink>Analyzer</LinkItem>
+                                    </>
+                                )}
+                            </>
+                        )}
+                        {!isLoggedIn && (
                             <>
                                 <LinkItem to="#features">Features</LinkItem>
                                 <LinkItem to="/pricing" isRouterLink>Pricing</LinkItem>
@@ -227,22 +233,25 @@ const Navbar = () => {
                             {isLoggedIn ? (
                                 user?.role === 'admin' ? (
                                     <>
-                                        <LinkItem to="/admin" isRouterLink mobile>Admin Console</LinkItem>
-                                        <LinkItem to="/profile" isRouterLink mobile>Profile</LinkItem>
+                                        <LinkItem to="/admin" isRouterLink mobile>Console Dashboard</LinkItem>
+                                        <LinkItem to="/community" isRouterLink mobile>Community Oversight</LinkItem>
+                                        <LinkItem to="/admin/documents" isRouterLink mobile>Document Vault</LinkItem>
+                                        <LinkItem to="/admin/audit" isRouterLink mobile>Security Audit</LinkItem>
+                                        <LinkItem to="/profile" isRouterLink mobile>Admin Profile</LinkItem>
                                     </>
                                 ) : (
                                     <>
                                         <LinkItem to="/dashboard" isRouterLink mobile>Dashboard</LinkItem>
+                                        <LinkItem to="/meta-campus" isRouterLink mobile>Meta-Campus Lobby</LinkItem>
                                         <LinkItem to="/profile" isRouterLink mobile>My Profile</LinkItem>
-                                        <LinkItem to="/chat" isRouterLink mobile>AI Chat</LinkItem>
-                                        <LinkItem to="/resources" isRouterLink mobile>Documents</LinkItem>
-                                        <LinkItem to="/resume" isRouterLink mobile>Resume</LinkItem>
-                                        <LinkItem to="/interview" isRouterLink mobile>Interview</LinkItem>
-                                        <LinkItem to="/planner" isRouterLink mobile>Planner</LinkItem>
-                                        <LinkItem to="/jobs" isRouterLink mobile>Jobs</LinkItem>
+                                        <LinkItem to="/chat" isRouterLink mobile>AI Assistant</LinkItem>
+                                        <LinkItem to="/jobs" isRouterLink mobile>Global Jobs</LinkItem>
+                                        <LinkItem to="/community" isRouterLink mobile>Campus Community</LinkItem>
+                                        <LinkItem to="/resume" isRouterLink mobile>Resume Analyzer</LinkItem>
+                                        <LinkItem to="/planner" isRouterLink mobile>Academic Planner</LinkItem>
+                                        <LinkItem to="/syllabus" isRouterLink mobile>Syllabus Tracker</LinkItem>
+                                        <LinkItem to="/alumni" isRouterLink mobile>Alumni Network</LinkItem>
                                         <LinkItem to="/hackathons" isRouterLink mobile>Hackathons</LinkItem>
-                                        <LinkItem to="/analytics" isRouterLink mobile>Progress</LinkItem>
-                                        <LinkItem to="/community" isRouterLink mobile>Community</LinkItem>
                                     </>
                                 )
                             ) : (

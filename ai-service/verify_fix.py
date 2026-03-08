@@ -25,13 +25,13 @@ def verify_code():
     with open(rag_path, "r", encoding="utf-8") as f:
         content = f.read()
         
-    if "OllamaLLM(model=\"llama2\", temperature=0.1)" in content:
-        print("✅ rag_chain.py is UPDATED correctly (temperature=0.1, OllamaLLM used).")
+    if "OllamaLLM(model=\"phi3\",  temperature=0.1)" in content:
+        print("✅ rag_chain.py is UPDATED correctly ( temperature=0.1, OllamaLLM used).")
     else:
         print("❌ rag_chain.py is OUTDATED!")
         
-    if "Ollama(model=\"llama2\", temperature=0.3)" in content:
-        print("❌ rag_chain.py still contains OLD code (temperature=0.3)!")
+    if "Ollama(model=\"phi3\",  temperature=0.10.3)" in content:
+        print("❌ rag_chain.py still contains OLD code ( temperature=0.10.3)!")
     else:
         print("✅ Old code removed from rag_chain.py.")
 

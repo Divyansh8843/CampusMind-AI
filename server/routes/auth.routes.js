@@ -88,7 +88,7 @@ router.post('/google', async (req, res) => {
     }
 
     const authToken = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, role: user.role, domain: user.domain },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -120,7 +120,11 @@ router.post('/google', async (req, res) => {
           semester: user.semester,
           profilePictureUpdated: user.profilePictureUpdated,
           subscription: user.subscription,
-          usage: user.usage
+          usage: user.usage,
+          github: user.github,
+          linkedin: user.linkedin,
+          skills: user.skills,
+          xp: user.xp
         }
       }
     });
@@ -134,7 +138,7 @@ router.post('/google', async (req, res) => {
 // Update Profile
 router.put('/profile', authMiddleware, async (req, res) => {
     try {
-        const { enrollment, branch, year, semester, picture, skills, github, linkedin, currentStudyTopic } = req.body;
+        const { enrollment, branch, year, semester, picture, skills, github, linkedin, currentStudyTopic, company } = req.body;
         const user = await User.findById(req.user.userId);
 
         if (!user) return res.status(404).json({ message: "User not found" });
@@ -148,14 +152,20 @@ router.put('/profile', authMiddleware, async (req, res) => {
         if (branch) user.branch = branch;
         if (year) user.year = year;
         if (semester) user.semester = semester;
+        // Profile Picture: Update ONLY if not already updated (One-time Selfie requirement)
         if (picture) {
-             user.picture = picture;
-             user.profilePictureUpdated = true;
+            if (!user.profilePictureUpdated) {
+                user.picture = picture;
+                user.profilePictureUpdated = true;
+            } else {
+                console.log(`Security: User ${user.email} attempted to bypass one-time selfie lock.`);
+            }
         }
-        if (skills) user.skills = skills;
-        if (github) user.github = github;
-        if (linkedin) user.linkedin = linkedin;
+        if (skills) user.skills = Array.isArray(skills) ? skills : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()).filter(Boolean) : skills);
+        if (github !== undefined) user.github = github;
+        if (linkedin !== undefined) user.linkedin = linkedin;
         if (currentStudyTopic) user.currentStudyTopic = currentStudyTopic;
+        if (company !== undefined) user.company = company;
 
         await user.save();
 

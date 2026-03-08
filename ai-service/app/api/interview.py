@@ -1,6 +1,10 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from app.agents.interview_agent import conduct_interview, generate_aptitude_test, generate_interview_feedback
+from app.agents.interview_agent import (
+    conduct_interview,
+    generate_aptitude_test,
+    generate_interview_feedback,
+)
 
 router = APIRouter()
 
@@ -15,6 +19,7 @@ class AptitudeRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     history: list
     topic: str
+    user_transcript: str = ""
 
 @router.post("/interview")
 def run_interview(payload: InterviewRequest):
@@ -26,4 +31,8 @@ def aptitude_test(payload: AptitudeRequest):
 
 @router.post("/feedback")
 def interview_feedback(payload: FeedbackRequest):
-    return generate_interview_feedback(payload.history, payload.topic)
+    return generate_interview_feedback(
+        payload.history,
+        payload.topic,
+        getattr(payload, "user_transcript", "") or "",
+    )
