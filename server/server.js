@@ -26,6 +26,7 @@ import metaRoutes from "./routes/meta.routes.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
 // 1. Security Headers (Helmet)
 // Helps protect from well-known web vulnerabilities like XSS, clickjacking, etc.
 app.use(helmet());
