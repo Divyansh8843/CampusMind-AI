@@ -129,6 +129,18 @@ router.post("/", authMiddleware, upload.single("file"), async (req, res) => {
     // 4. Cache
     await clearUserCache(req.user.userId);
 
+    // 5. Index document in AI Service Vector DB
+    try {
+        const aiUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
+        await axios.post(`${aiUrl}/upload`, {
+            file_url: req.file.location
+        });
+        console.log("Successfully indexed document in Local AI Vector DB");
+    } catch (aiError) {
+        console.error("Local AI Service Indexing Error:", aiError.message);
+        // Note: we don't throw error here to avoid blocking the upload if AI is temporarily down
+    }
+
     res.status(200).json({ success: true, document: newDoc });
 
   } catch (error) {

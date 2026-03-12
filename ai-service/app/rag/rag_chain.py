@@ -19,7 +19,7 @@ def get_embeddings():
     global _embeddings
     if _embeddings is None:
         try:
-            print("🧠 Initializing Neural Embeddings (Local MiniLM)...")
+            print("Initializing Neural Embeddings (Local MiniLM)...")
             from langchain_huggingface import HuggingFaceEmbeddings
             _embeddings = HuggingFaceEmbeddings(
                 model_name="sentence-transformers/all-MiniLM-L6-v2",
@@ -27,7 +27,7 @@ def get_embeddings():
                 encode_kwargs={'normalize_embeddings': True}
             )
         except Exception as e:
-            print(f"⚠️ Embedding Initialization Warning: {e}. AI features might be limited.")
+            print(f"Embedding Initialization Warning: {e}. AI features might be limited.")
             return None
     return _embeddings
 
@@ -42,16 +42,16 @@ def get_llm():
         print("DEBUG: Probing Local Llama Node (Ollama)...")
         from langchain_ollama import OllamaLLM
         # Defaulting to llama3 or phi3 depending on local setup
-        llm_local = OllamaLLM(model="phi3", temperature=0.1, timeout=5)
+        llm_local = OllamaLLM(model="phi3", temperature=0.1, timeout=30)
         
         # Test the connection to ensure it's alive
         llm_local.invoke("ping") 
         
-        print("✅ Local AI Node: ACTIVE (100% Agentic RAG / ML, NO OpenAI Key)")
+        print("Local AI Node: ACTIVE (100% Agentic RAG / ML, NO OpenAI Key)")
         _llm = llm_local
         return _llm
     except Exception as e:
-        print(f"❌ Critical Local AI Infrastructure Error: {e}. Ensure Ollama is running.")
+        print(f"Critical Local AI Infrastructure Error: {e}. Ensure Ollama is running.")
         return None
 
 def run_study_rag(state):
@@ -92,6 +92,11 @@ def run_study_rag(state):
             3. Start your response by saying: "I couldn't find this specific detail in your notes, but based on general knowledge..." 
             [/INST]
             """
+            prompt = PromptTemplate(
+                template=template,
+                input_variables=["question"]
+            )
+            final_prompt = prompt.format(question=query)
         else:
             template = """
             [INST]
@@ -105,14 +110,11 @@ def run_study_rag(state):
             {question}
             [/INST]
             """
-
-        prompt = PromptTemplate(
-            template=template,
-            input_variables=["context", "question"]
-        )
-
-        # Make sure question is passed to format
-        final_prompt = prompt.format(context=context, question=query)
+            prompt = PromptTemplate(
+                template=template,
+                input_variables=["context", "question"]
+            )
+            final_prompt = prompt.format(context=context, question=query)
 
         response = llm_engine.invoke(final_prompt)
 
