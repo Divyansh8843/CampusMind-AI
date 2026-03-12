@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyToken } from '../middleware/auth.middleware.js';
+import authMiddleware from '../middleware/auth.js';
 import User from '../models/User.js';
 
 const router = express.Router();
@@ -12,7 +12,7 @@ const BREAK_MSECS = 5 * 60 * 1000;        // 5 minutes break
 // In-memory active meta-campus rooms caching to be incredibly fast
 const activeUsers = new Map();
 
-router.post('/join', verifyToken, async (req, res) => {
+router.post('/join', authMiddleware, async (req, res) => {
     try {
         const { topic } = req.body;
         const userId = req.user.id;
@@ -75,7 +75,7 @@ router.post('/join', verifyToken, async (req, res) => {
     }
 });
 
-router.post('/leave', verifyToken, async (req, res) => {
+router.post('/leave', authMiddleware, async (req, res) => {
     try {
         activeUsers.delete(req.user.id);
         res.json({ success: true });
