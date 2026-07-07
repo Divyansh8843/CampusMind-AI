@@ -37,6 +37,11 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: REDIS_URL
+        - name: INTERNAL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: INTERNAL_API_KEY
         resources:
           requests:
             cpu: "500m"

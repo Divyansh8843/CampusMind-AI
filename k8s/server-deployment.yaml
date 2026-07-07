@@ -36,6 +36,21 @@ spec:
           value: "http://ai-service-clusterip:8000"
         - name: CLIENT_URL
           value: "https://campusmind.com" # Replace with actual frontend URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: JWT_SECRET
+        - name: GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: GOOGLE_CLIENT_ID
+        - name: INTERNAL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: INTERNAL_API_KEY
         resources:
           requests:
             cpu: "250m"
