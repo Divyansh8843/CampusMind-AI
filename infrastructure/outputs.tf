@@ -22,3 +22,13 @@ output "docdb_port" {
   description = "Port for the Amazon DocumentDB cluster"
   value       = aws_docdb_cluster.campusmind_db.port
 }
+
+output "frontend_s3_bucket" {
+  description = "The name of the S3 bucket holding the React frontend"
+  value       = aws_s3_bucket.frontend_bucket.bucket
+}
+
+output "frontend_cloudfront_url" {
+  description = "The global CloudFront CDN URL for the React frontend"
+  value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
+}

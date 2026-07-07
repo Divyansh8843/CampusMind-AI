@@ -114,3 +114,43 @@ jobs:
         run: |
           kubectl rollout status deployment/server-deployment
           kubectl rollout status deployment/ai-service-deployment
+
+  deploy-frontend:
+    name: Build and Deploy React Frontend to S3
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (Frontend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'client/package-lock.json'
+
+      - name: Install and Build Frontend
+        working-directory: ./client
+        run: |
+          npm ci
+          # You can inject the API URL dynamically during build if needed
+          # REACT_APP_API_URL=${{ secrets.VITE_API_URL }} npm run build
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to S3
+        working-directory: ./client
+        # Ensure you add AWS_S3_BUCKET to your GitHub Secrets
+        run: aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete
+
+      - name: Invalidate CloudFront Cache
+        # Ensure you add AWS_CLOUDFRONT_ID to your GitHub Secrets
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_ID }} --paths "/*"
