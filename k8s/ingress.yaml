@@ -11,8 +11,7 @@ metadata:
     # alb.ingress.kubernetes.io/target-type: ip
 spec:
   rules:
-  - host: api.campusmind.com
-    http:
+  - http:
       paths:
       - path: /ai
         pathType: Prefix
