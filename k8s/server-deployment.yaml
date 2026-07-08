@@ -27,8 +27,6 @@ spec:
           value: "3000"
         - name: AI_SERVICE_URL
           value: "http://ai-service-clusterip:8000"
-        - name: CLIENT_URL
-          value: "https://d2fwscuf13x8im.cloudfront.net"
         resources:
           requests:
             cpu: "250m"
