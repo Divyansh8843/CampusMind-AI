@@ -1,15 +1,11 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
 metadata:
-  name: chromadb-pvc
-  labels:
-    app: chromadb
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi # 10GB permanent AWS EBS drive
+  name: ebs-sc
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -45,8 +41,8 @@ spec:
           mountPath: /chroma/chroma
         resources:
           requests:
-            cpu: "500m"
-            memory: "1Gi"
+            cpu: "250m"
+            memory: "512Mi"
           limits:
             cpu: "1000m"
             memory: "2Gi"
@@ -55,6 +51,7 @@ spec:
       name: chromadb-data
     spec:
       accessModes: [ "ReadWriteOnce" ]
+      storageClassName: ebs-sc
       resources:
         requests:
           storage: 10Gi
