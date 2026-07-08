@@ -53,7 +53,7 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.warn(`Blocked by CORS: ${origin}`);
+        console.warn(`Blocked by CORS. Origin: '${origin}', Allowed:`, allowedOrigins, `Raw ENV: '${process.env.CLIENT_URL}'`);
         callback(new Error('Not allowed by CORS'));
       }
     },
