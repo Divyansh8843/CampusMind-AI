@@ -45,7 +45,18 @@ app.set("trust proxy", 1);
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : "http://localhost:5173",
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      const allowedOrigins = process.env.CLIENT_URL
+        ? process.env.CLIENT_URL.split(',').map(u => u.trim())
+        : ["http://localhost:5173"];
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`Blocked by CORS: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   }),
