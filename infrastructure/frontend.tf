@@ -42,6 +42,19 @@ resource "aws_cloudfront_distribution" "frontend_cdn" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac.id
   }
 
+  # Backend API Origin (EKS Load Balancer)
+  origin {
+    domain_name = "acc6acf3bd9284c288030c14e586837a-1016584289.us-east-1.elb.amazonaws.com"
+    origin_id   = "backend-api"
+
+    custom_origin_config {
+      http_port              = 3000
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
@@ -58,6 +71,27 @@ resource "aws_cloudfront_distribution" "frontend_cdn" {
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
+  }
+
+  # API Gateway Routing Rule
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    target_origin_id = "backend-api"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Content-Type", "Origin", "Referer"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "https-only"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
   }
 
   # React SPA Routing Rule: If a user visits /dashboard directly, S3 throws a 403 or 404. 

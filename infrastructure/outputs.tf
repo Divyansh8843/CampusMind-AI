@@ -32,3 +32,8 @@ output "frontend_cloudfront_url" {
   description = "The global CloudFront CDN URL for the React frontend"
   value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
 }
+
+output "frontend_cloudfront_id" {
+  description = "The exact ID of the CloudFront Distribution (Need this for GitHub Secrets AWS_CLOUDFRONT_ID)"
+  value       = aws_cloudfront_distribution.frontend_cdn.id
+}

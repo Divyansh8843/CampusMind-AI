@@ -15,8 +15,6 @@ from app.api.alumni_verification import router as alumni_verification_router
 from app.api.resume import router as resume_router
 from app.api.syllabus import router as syllabus_router
 from app.api.upload import router as upload_router
-from app.vectorstore.chroma_store import PERSIST_DIRECTORY
-
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", message=".*allowed_objects.*", category=UserWarning)
@@ -33,7 +31,6 @@ async def lifespan(app: FastAPI):
     print("=" * 60)
     print("CampusMind AI Service started")
     print(f"Working directory: {os.getcwd()}")
-    print(f"Vector DB path: {PERSIST_DIRECTORY}")
     print("=" * 60)
     yield
 

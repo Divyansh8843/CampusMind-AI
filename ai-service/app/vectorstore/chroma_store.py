@@ -1,10 +1,7 @@
-from pathlib import Path
-
-PERSIST_DIRECTORY = Path(__file__).resolve().parents[2] / "chroma_db"
-PERSIST_DIRECTORY.mkdir(parents=True, exist_ok=True)
+import os
+import chromadb
 
 _vectorstore = None
-
 
 def get_vectorstore():
     global _vectorstore
@@ -19,8 +16,15 @@ def get_vectorstore():
 
     from app.embeddings.embedding_model import get_embeddings
 
+    # Connect to the distributed ChromaDB StatefulSet in Kubernetes
+    chroma_host = os.environ.get("CHROMA_HOST", "chromadb-service")
+    chroma_port = os.environ.get("CHROMA_PORT", "8000")
+    
+    client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
+
     _vectorstore = Chroma(
-        persist_directory=str(PERSIST_DIRECTORY),
+        client=client,
+        collection_name="campusmind_ai_collection",
         embedding_function=get_embeddings(),
     )
 
@@ -28,7 +32,5 @@ def get_vectorstore():
 
 
 def persist_vectorstore(vectorstore):
-    persist = getattr(vectorstore, "persist", None)
-
-    if callable(persist):
-        persist()
+    # When using chromadb.HttpClient, persistence is handled automatically by the server.
+    pass

@@ -9,6 +9,12 @@ module "eks" {
   subnet_ids                     = module.vpc.private_subnets
   cluster_endpoint_public_access = true
 
+  cluster_addons = {
+    aws-ebs-csi-driver = {
+      most_recent = true
+    }
+  }
+
   # Managed Node Groups
   eks_managed_node_groups = {
     # Standard node group for the Node.js server
@@ -19,6 +25,11 @@ module "eks" {
       
       instance_types = ["m5.large", "m5a.large"]
       capacity_type  = "ON_DEMAND"
+      
+      # Grant the worker nodes permission to attach/detach EBS volumes
+      iam_role_additional_policies = {
+        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+      }
     }
 
     # Optional: GPU node group specifically for AI workloads

@@ -105,6 +105,7 @@ jobs:
           sed -i "s|image: campusmind/ai-service:latest|image: $ECR_REGISTRY/$ECR_REPOSITORY_AI:$IMAGE_TAG|g" ai-service-deployment.yaml
           
           # Apply the configurations
+          kubectl apply -f chromadb.yaml
           kubectl apply -f server-deployment.yaml
           kubectl apply -f ai-service-deployment.yaml
           kubectl apply -f hpa.yaml

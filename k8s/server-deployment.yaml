@@ -19,38 +19,16 @@ spec:
         image: campusmind/server:latest # Replace with your ECR image URI later
         ports:
         - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: server-secrets
         env:
         - name: PORT
           value: "3000"
-        - name: MONGO_URI
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: MONGO_URI
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: REDIS_URL
         - name: AI_SERVICE_URL
           value: "http://ai-service-clusterip:8000"
         - name: CLIENT_URL
-          value: "https://campusmind.com" # Replace with actual frontend URL
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: JWT_SECRET
-        - name: GOOGLE_CLIENT_ID
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: GOOGLE_CLIENT_ID
-        - name: INTERNAL_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: INTERNAL_API_KEY
+          value: "https://d2fwscuf13x8im.cloudfront.net"
         resources:
           requests:
             cpu: "250m"
