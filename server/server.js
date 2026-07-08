@@ -45,7 +45,7 @@ app.set("trust proxy", 1);
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   }),
@@ -87,7 +87,7 @@ if (!isProduction) {
   app.use("/uploads", express.static(UPLOAD_ROOT));
 }
 
-app.get("/health", async (req, res) => {
+app.get("/api/health", async (req, res) => {
   const mongoOk = mongoose.connection.readyState === 1;
   let aiOk = false;
 
