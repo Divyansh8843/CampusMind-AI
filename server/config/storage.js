@@ -140,11 +140,18 @@ export const storeUploadedFile = async (file, { userId }) => {
     try {
       return await uploadToS3(file, userId);
     } catch (error) {
-      console.warn(`S3 upload failed (${error.message}). Falling back to local storage.`);
+      if (process.env.NODE_ENV === "production") {
+        console.error(`S3 upload fatal error: ${error.message}`);
+        throw new Error(`AWS S3 Upload Failed: ${error.message}. Please check if the bucket exists and IAM permissions are correct.`);
+      }
+      console.warn(`S3 upload failed (${error.message}). Falling back to local storage in development mode.`);
       return uploadLocally(file, userId);
     }
   }
 
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Production Error: AWS S3 is not configured in the environment variables!");
+  }
   return uploadLocally(file, userId);
 };
 

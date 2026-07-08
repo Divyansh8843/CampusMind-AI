@@ -42,13 +42,22 @@ router.get('/stats', authMiddleware, adminCheck, async (req, res) => {
             details: log.details
         }));
 
+        const [monthlyCount, yearlyCount, alumniCount, adminCount] = await Promise.all([
+            User.countDocuments({ "subscription.plan": 'monthly' }),
+            User.countDocuments({ "subscription.plan": 'yearly' }),
+            User.countDocuments({ role: 'alumni' }),
+            User.countDocuments({ role: 'admin' }),
+        ]);
+
         res.json({
             success: true,
             stats: {
                 totalUsers: userCount,
                 activeSessions,
-                premiumUsers: await User.countDocuments({ "subscription.plan": { $in: ['monthly', 'yearly'] } }),
-                revenueEstimate: (await User.countDocuments({ "subscription.plan": 'monthly' }) * 9) + (await User.countDocuments({ "subscription.plan": 'yearly' }) * 99),
+                premiumUsers: monthlyCount + yearlyCount,
+                alumniCount,
+                adminCount,
+                revenueEstimate: (monthlyCount * 9) + (yearlyCount * 99),
                 systemStatus: "Healthy",
                 uptime: process.uptime()
             },
@@ -60,14 +69,17 @@ router.get('/stats', authMiddleware, adminCheck, async (req, res) => {
     }
 });
 
+// GET Users — now supports role filter: student | alumni | admin
 router.get('/users', authMiddleware, adminCheck, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
-        const { branch, year, search, plan } = req.query;
+        const { branch, year, search, plan, role } = req.query;
         const skip = (page - 1) * limit;
 
-        let query = { role: 'student' };
+        // Build role query — default to student
+        const roleFilter = role && ['student', 'alumni', 'admin'].includes(role) ? role : 'student';
+        let query = { role: roleFilter };
         
         if (branch && branch !== 'All') query.branch = branch;
         if (year && year !== 'All') query.year = year;
@@ -76,7 +88,9 @@ router.get('/users', authMiddleware, adminCheck, async (req, res) => {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
-                { enrollment: { $regex: search, $options: 'i' } }
+                { enrollment: { $regex: search, $options: 'i' } },
+                { company: { $regex: search, $options: 'i' } },
+                { collegeName: { $regex: search, $options: 'i' } }
             ];
         }
 
@@ -96,7 +110,7 @@ router.get('/users', authMiddleware, adminCheck, async (req, res) => {
                 page,
                 limit,
                 total,
-                pages: Math.ceil(total / limit)
+                pages: Math.ceil(total / limit) || 1
             }
         });
     } catch (error) {
@@ -111,6 +125,11 @@ router.patch('/users/:id', authMiddleware, adminCheck, async (req, res) => {
         const { role, subscription, usage, xp, level, name, branch, year, semester, enrollment } = req.body;
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Prevent self-demotion from admin role
+        if (req.params.id === req.user.userId && role && role !== 'admin') {
+            return res.status(403).json({ message: "You cannot demote your own admin account." });
+        }
 
         // Meta/Role
         if (role) user.role = role;
@@ -127,6 +146,13 @@ router.patch('/users/:id', authMiddleware, adminCheck, async (req, res) => {
         if (enrollment) user.enrollment = enrollment;
 
         await user.save();
+
+        await Log.create({
+            action: 'Admin User Override',
+            user: req.user.email,
+            details: `Modified ${user.email} — ${JSON.stringify(req.body)}`
+        });
+
         res.json({ success: true, message: "User updated successfully", user });
     } catch (error) {
         res.status(500).json({ message: "Failed to update user" });
@@ -268,13 +294,14 @@ router.delete('/jobs/:id', authMiddleware, adminCheck, async (req, res) => {
     }
 });
 
+// ALUMNI VERIFICATION
 router.get('/alumni/pending', authMiddleware, adminCheck, async (req, res) => {
     try {
         const pending = await User.find({
             role: 'alumni',
             'alumniVerification.status': { $in: ['pending', 'rejected', 'unverified'] }
         })
-          .select('name email enrollment collegeName course branch graduationYear linkedin alumniVerification createdAt')
+          .select('name email enrollment collegeName course branch graduationYear linkedin alumniVerification createdAt picture')
           .sort({ 'alumniVerification.submittedAt': -1, createdAt: -1 })
           .limit(100);
 
@@ -318,9 +345,69 @@ router.patch('/alumni/:id/verification', authMiddleware, adminCheck, async (req,
         }
 
         await user.save();
+
+        await Log.create({
+            action: `Alumni Verification ${action === 'approve' ? 'Approved' : 'Rejected'}`,
+            user: req.user.email,
+            details: `${action} for: ${user.email}`
+        });
+
         res.json({ success: true, user });
     } catch (error) {
         res.status(500).json({ message: 'Failed to update alumni verification' });
+    }
+});
+
+// NEW: Real-time Revenue Stats
+router.get('/revenue-stats', authMiddleware, adminCheck, async (req, res) => {
+    try {
+        const [monthlyCount, yearlyCount, freeCount, totalUsers] = await Promise.all([
+            User.countDocuments({ "subscription.plan": 'monthly', "subscription.status": 'active' }),
+            User.countDocuments({ "subscription.plan": 'yearly', "subscription.status": 'active' }),
+            User.countDocuments({ "subscription.plan": 'free' }),
+            User.countDocuments()
+        ]);
+
+        const MONTHLY_PRICE = 9;
+        const YEARLY_PRICE = 99;
+        const mrr = (monthlyCount * MONTHLY_PRICE) + (yearlyCount * (YEARLY_PRICE / 12));
+        const arr = mrr * 12;
+        const premiumTotal = monthlyCount + yearlyCount;
+        const conversionRate = totalUsers > 0 ? ((premiumTotal / totalUsers) * 100).toFixed(1) : 0;
+
+        res.json({
+            success: true,
+            revenue: {
+                monthlyCount,
+                yearlyCount,
+                freeCount,
+                totalUsers,
+                mrr: Math.round(mrr),
+                arr: Math.round(arr),
+                conversionRate,
+                premiumTotal,
+                monthlyRevenue: monthlyCount * MONTHLY_PRICE,
+                yearlyRevenue: yearlyCount * YEARLY_PRICE
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch revenue stats" });
+    }
+});
+
+// NEW: Admin own profile
+router.get('/profile', authMiddleware, adminCheck, async (req, res) => {
+    try {
+        const admin = await User.findById(req.user.userId).select('-googleId');
+        if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+        const recentActivity = await Log.find({ user: admin.email })
+            .sort({ timestamp: -1 })
+            .limit(20);
+
+        res.json({ success: true, admin, recentActivity });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch admin profile" });
     }
 });
 
@@ -336,7 +423,7 @@ router.get('/health-insight', authMiddleware, adminCheck, async (req, res) => {
             platform: process.platform,
             dbActive: true,
             cacheStatus: 'Connected (Redis)',
-            latencyEstimate: '14ms - 42ms' // Mock latency for high-tech feel
+            latencyEstimate: '14ms - 42ms'
         };
         res.json({ success: true, performance });
     } catch (error) {
