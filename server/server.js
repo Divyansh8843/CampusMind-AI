@@ -48,7 +48,7 @@ app.use(
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
       const allowedOrigins = process.env.CLIENT_URL
-        ? process.env.CLIENT_URL.split(',').map(u => u.trim())
+        ? process.env.CLIENT_URL.split(',').map(u => u.replace(/^"|"$/g, '').trim())
         : ["http://localhost:5173"];
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
