@@ -1,31 +1,33 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Chat from './pages/Chat';
-import Resources from './pages/Resources';
-import Resume from './pages/Resume';
-import Interview from './pages/Interview';
-import Profile from './pages/Profile';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminDocuments from './pages/AdminDocuments';
-import SystemAudit from './pages/SystemAudit';
-import Analytics from './pages/Analytics';
 import Layout from './components/Layout';
-import Pricing from './pages/Pricing';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
 import SupportBot from './components/SupportBot';
-import Planner from './pages/Planner';
-import Jobs from './pages/Jobs';
-import Hackathons from './pages/Hackathons';
-import Community from './pages/Community';
-import Syllabus from './pages/Syllabus';
-import Alumni from './pages/Alumni';
-import MetaCampus from './pages/MetaCampus';
 import { isAlumniFullyVerified, hasCompleteStudentProfile } from './utils/accessControl';
+
+// Lazy load all non-critical pages for massive performance boost
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Resources = lazy(() => import('./pages/Resources'));
+const Resume = lazy(() => import('./pages/Resume'));
+const Interview = lazy(() => import('./pages/Interview'));
+const Profile = lazy(() => import('./pages/Profile'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminDocuments = lazy(() => import('./pages/AdminDocuments'));
+const SystemAudit = lazy(() => import('./pages/SystemAudit'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const Planner = lazy(() => import('./pages/Planner'));
+const Jobs = lazy(() => import('./pages/Jobs'));
+const Hackathons = lazy(() => import('./pages/Hackathons'));
+const Community = lazy(() => import('./pages/Community'));
+const Syllabus = lazy(() => import('./pages/Syllabus'));
+const Alumni = lazy(() => import('./pages/Alumni'));
+const MetaCampus = lazy(() => import('./pages/MetaCampus'));
 const PrivateRoutes = () => {
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -98,6 +100,11 @@ export default function App() {
   return (
     <>
       <Toaster position="top-right" reverseOrder={false} />
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-950">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+        </div>
+      }>
         <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
@@ -149,7 +156,8 @@ export default function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <SupportBot />
+      </Suspense>
+      <SupportBot />
     </>
   );
 }
