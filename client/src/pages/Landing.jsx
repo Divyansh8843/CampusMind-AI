@@ -34,7 +34,7 @@ const Landing = () => {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
+        <div className="absolute inset-0 bg-slate-900/5 opacity-20"></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
           <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/20 rounded-full blur-[100px]" />
           <div className="absolute bottom-20 right-20 w-72 h-72 bg-purple-500/20 rounded-full blur-[100px]" />
@@ -305,7 +305,7 @@ const Landing = () => {
       </section>
 
       <section className="py-20 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+        <div className="absolute inset-0 bg-slate-900/5 opacity-10"></div>
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
             Ready to Transform Your Academic Journey?

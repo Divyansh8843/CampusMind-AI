@@ -78,7 +78,7 @@ const Footer = () => {
                                     CampusMind AI
                                 </span>
                             </div>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-sm">
+                            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed max-w-sm">
                                 India-wide intelligent academic copilot designed for students and verified alumni to bridge the gap between academia and industry.
                             </p>
                             <div className="flex items-center gap-4 pt-2">
@@ -92,8 +92,8 @@ const Footer = () => {
                         </div>
                         
                         <div className="lg:col-span-2 min-w-0">
-                            <h4 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Platform</h4>
-                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400 font-medium">
+                            <h3 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Platform</h3>
+                            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-300 font-medium">
                                 <li><Link to="/" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Home</Link></li>
                                 <li><Link to="/pricing" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Pricing</Link></li>
                                 <li><Link to={authPath('/dashboard')} className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Dashboard</Link></li>
@@ -102,8 +102,8 @@ const Footer = () => {
                         </div>
 
                         <div className="lg:col-span-2 min-w-0">
-                            <h4 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Support</h4>
-                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400 font-medium">
+                            <h3 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Support</h3>
+                            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-300 font-medium">
                                 <li><a href="/#faq" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Help Center</a></li>
                                 <li><a href="/#features" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Features</a></li>
                                 <li><Link to="/login" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">{isLoggedIn ? 'Account' : 'Sign In'}</Link></li>
@@ -112,16 +112,16 @@ const Footer = () => {
                         </div>
 
                         <div className="lg:col-span-2 min-w-0">
-                            <h4 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Legal</h4>
-                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400 font-medium">
+                            <h3 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Legal</h3>
+                            <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-300 font-medium">
                                 <li><Link to="/privacy" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Privacy Policy</Link></li>
                                 <li><Link to="/terms" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Terms of Service</Link></li>
                             </ul>
                         </div>
 
                         <div className="lg:col-span-2 min-w-0">
-                            <h4 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Reach Us</h4>
-                            <ul className="space-y-5 text-sm text-slate-500 dark:text-slate-400">
+                            <h3 className="font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-wider text-xs">Reach Us</h3>
+                            <ul className="space-y-5 text-sm text-slate-600 dark:text-slate-300">
                                 <li className="flex items-start gap-3">
                                     <Mail size={18} className="mt-0.5 shrink-0 text-blue-500" />
                                     <div className="min-w-0">

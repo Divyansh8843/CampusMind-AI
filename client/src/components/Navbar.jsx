@@ -152,7 +152,7 @@ const Navbar = () => {
 
                         {isLoggedIn ? (
                             <div className="relative group">
-                                <button className="flex items-center gap-2 p-1 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+                                <button aria-label="User Profile Menu" className="flex items-center gap-2 p-1 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                                     <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-slate-200 dark:ring-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                                         {user?.picture ? (
                                             <img src={user.picture} alt="User" className="w-full h-full object-cover" />
@@ -226,6 +226,7 @@ const Navbar = () => {
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
                         <button 
+                            aria-label="Toggle Mobile Menu"
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             className="text-slate-600 dark:text-white"
                         >
