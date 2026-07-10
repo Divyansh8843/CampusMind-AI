@@ -8,19 +8,14 @@ const formatStat = (value) => {
   return `${num.toLocaleString('en-IN')}${num > 0 ? '+' : ''}`;
 };
 
-const StatCard = ({ icon: Icon, label, value, delay = 0 }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 16 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.5 }}
-    className="rounded-2xl border border-slate-200/80 bg-slate-900/90 px-6 py-5 text-center shadow-xl backdrop-blur-md dark:border-white/10"
-  >
+const StatCard = ({ icon: Icon, label, value }) => (
+  <div className="rounded-2xl border border-slate-200/80 bg-slate-900/90 px-6 py-5 text-center shadow-xl backdrop-blur-md dark:border-white/10">
     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
       <Icon size={20} />
     </div>
     <p className="text-3xl font-black tracking-tight text-white md:text-4xl">{formatStat(value)}</p>
     <p className="mt-1 text-sm font-medium text-slate-400">{label}</p>
-  </motion.div>
+  </div>
 );
 
 const HeroLiveStats = () => {
