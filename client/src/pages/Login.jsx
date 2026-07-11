@@ -3,6 +3,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { Brain, Sparkles, BookOpen, GraduationCap, XCircle, ShieldCheck, MailCheck, UserCheck } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -13,6 +14,7 @@ const Login = () => {
   const location = useLocation();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isHuman, setIsHuman] = useState(false);
 
   // Background particle animation variants
   const backgroundVariants = {
@@ -154,25 +156,49 @@ const Login = () => {
                 </motion.div>
             )}
 
-            {/* Login Button */}
-            <div className="flex justify-center flex-col gap-3">
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={() => {
-                            console.log('Login Failed');
-                            setError("Google Sign-In was unsuccessful.");
+            {/* Login Button Area */}
+            <div className="flex flex-col gap-4 max-w-sm mx-auto">
+                {/* Real Cloudflare Turnstile Verification */}
+                <div className="flex justify-center w-full overflow-hidden mb-2">
+                    <Turnstile
+                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
+                        onSuccess={(token) => setIsHuman(true)}
+                        onError={() => setIsHuman(false)}
+                        onExpire={() => setIsHuman(false)}
+                        options={{
+                            theme: 'auto',
+                            size: 'flexible',
                         }}
-                        theme="filled_black" 
-                        shape="pill"
-                        text="continue_with"
-                        size="large"
-                        width="100%"
                     />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">
-                    Restricted to authorized college domains.
-                  </p>
+                </div>
+
+                {/* Google Login Component (Hidden until verified) */}
+                <div className="flex justify-center w-full transition-all duration-500 min-h-[44px]">
+                    {isHuman ? (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="w-full flex justify-center"
+                        >
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => {
+                                    console.log('Login Failed');
+                                    setError("Google Sign-In was unsuccessful.");
+                                }}
+                                theme="filled_black" 
+                                shape="pill"
+                                text="continue_with"
+                                size="large"
+                                width="100%"
+                            />
+                        </motion.div>
+                    ) : (
+                        <div className="w-full h-11 rounded-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm cursor-not-allowed">
+                            Verification required
+                        </div>
+                    )}
+                </div>
             </div>
 
           </motion.div>

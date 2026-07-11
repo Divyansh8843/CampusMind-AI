@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-icon.svg'],
       manifest: {
-        name: 'CampusMind AI - Official Portal',
+        name: 'CampusMind AI - Official Platform',
         short_name: 'CampusMind',
         description: 'The Official Intelligent Academic Copilot for College Students.',
         theme_color: '#0f172a',
@@ -19,16 +19,32 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-icon.svg',
+            src: 'logo2.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: 'pwa-icon.svg',
+            src: 'logo2.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
+          }
+        ],
+        screenshots: [
+          {
+            src: 'platform.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'CampusMind AI Dashboard'
+          },
+          {
+            src: 'platform.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'CampusMind AI Mobile'
           }
         ]
       }

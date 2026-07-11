@@ -5,6 +5,7 @@ import Landing from './pages/Landing';
 import Layout from './components/Layout';
 import SupportBot from './components/SupportBot';
 import { isAlumniFullyVerified, hasCompleteStudentProfile } from './utils/accessControl';
+import GlobalBanners from './components/GlobalBanners';
 
 // Lazy load all non-critical pages for massive performance boost
 const Login = lazy(() => import('./pages/Login'));
@@ -158,6 +159,7 @@ export default function App() {
         </Routes>
       </Suspense>
       <SupportBot />
+      <GlobalBanners />
     </>
   );
 }
