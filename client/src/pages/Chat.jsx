@@ -21,6 +21,8 @@ import {
   Calendar,
   Code,
   Play,
+  ArrowLeft,
+  Menu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { logActivity } from "../utils/logger";
@@ -43,6 +45,7 @@ const Chat = () => {
   const [codeLanguage, setCodeLanguage] = useState("javascript");
   const [codeContent, setCodeContent] = useState("");
   const [codeOutput, setCodeOutput] = useState("");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
@@ -202,15 +205,15 @@ const Chat = () => {
   };
 
   const [showHistory, setShowHistory] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatSessions, setChatSessions] = useState([]);
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Load chat history across all chat types so older chats never disappear
-  // (the app saves different modules under type: study/general/support/planner).
-  const CHAT_HISTORY_TYPE = "all";
+  // Load chat history specifically for study mode so it doesn't leak support chats
+  const CHAT_HISTORY_TYPE = "study";
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -506,97 +509,107 @@ const Chat = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto  min-h-0 h-[calc(100vh-120px)] flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden relative">
+    <div className="flex h-screen w-full bg-[#0B1120] overflow-hidden text-white font-sans relative">
       <Toaster position="top-center" />
 
-      {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center">
-            <Bot size={24} />
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? "flex" : "hidden"} absolute md:relative inset-y-0 left-0 w-[280px] flex-shrink-0 flex-col bg-[#0f172a] border-r border-white/5 h-full z-30 shadow-2xl`}>
+        <div className="p-4 flex items-center justify-between border-b border-white/5">
+          <div className="flex items-center gap-2 text-white font-bold text-lg">
+            <History size={20} className="text-blue-500" />
+            Chat History
           </div>
-          <div>
-            <h2 className="font-bold text-slate-800 dark:text-white">
-              CampusMind AI
-            </h2>
-            <span className="text-xs text-green-500 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>{" "}
-              Online
-            </span>
-          </div>
+          <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-white/10 rounded-full transition-colors text-slate-400" title="Close Menu">
+            <X size={20} />
+          </button>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="p-4">
           <button
             onClick={startNewChat}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all"
           >
-            <span className="text-xl leading-none font-medium -mt-0.5">+</span>{" "}
-            New
+            <span className="text-xl leading-none font-medium -mt-0.5">+</span> New Chat
           </button>
-          <button
-            onClick={() => {
-              if (!showHistory) fetchChatSessions();
-              setShowHistory(!showHistory);
-            }}
-            className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            title="Previous Chats"
-          >
-            <History size={20} className="text-slate-600 dark:text-slate-300" />
-          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 custom-scrollbar">
+          {chatSessions.length > 0 ? (
+            chatSessions.map((dayGroup, idx) => (
+              <div key={idx} className="space-y-2">
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  {dayGroup.date}
+                </div>
+                {dayGroup.chats?.map((chatSession, cIdx) => (
+                  <div
+                    key={cIdx}
+                    className="p-3 bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors border border-white/5"
+                    onClick={() => {
+                      setMessages(chatSession.messages || []);
+                      setHasMore(false);
+                      setSidebarOpen(false); // Close sidebar automatically on mobile
+                    }}
+                  >
+                     <div className="text-sm font-medium text-slate-200 truncate">
+                       {chatSession.messages?.find(m => m.role === 'user')?.content?.slice(0, 30) || "New Conversation"}...
+                     </div>
+                     <div className="text-xs text-slate-500 mt-1 flex justify-between">
+                       <span>{chatSession.messages?.length || 0} msgs</span>
+                       <span>{new Date(chatSession.messages?.[0]?.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                     </div>
+                  </div>
+                ))}
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-slate-500 text-center py-4">No previous chats</div>
+          )}
+        </div>
+        
+        <div className="p-4 border-t border-white/5 space-y-2">
+           <button onClick={() => fetchHistory(1, true)} className="w-full py-2 flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-white border border-white/10 hover:bg-white/5 rounded-lg transition-colors">
+              <History size={14} /> Refresh History
+           </button>
         </div>
       </div>
 
-      {/* Previous Chats Sidebar */}
-      <AnimatePresence>
-        {showHistory && (
-          <motion.div
-            initial={{ x: -300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -300, opacity: 0 }}
-            className="absolute left-0 top-0 bottom-0 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-white/10 z-20 overflow-y-auto"
-          >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-slate-800 dark:text-white">
-                  Previous Chats
-                </h3>
-                <button
-                  onClick={() => setShowHistory(false)}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="space-y-2">
-                {chatSessions.length > 0 ? (
-                  chatSessions.map((session, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                      onClick={() => {
-                        setMessages(session.messages || []);
-                        setHasMore(false);
-                        setShowHistory(false);
-                      }}
-                    >
-                      <div className="text-sm font-medium text-slate-800 dark:text-white">
-                        {session.date || "Session " + (idx + 1)}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {session.messageCount || 0} messages
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-slate-400 text-center py-4">
-                    No previous chats
-                  </div>
-                )}
-              </div>
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col relative h-full bg-[#111827]">
+        {/* Header */}
+        <div className="px-4 py-4 border-b border-white/5 bg-[#0f172a] flex items-center justify-between z-10">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400" title="Go Back">
+               <ArrowLeft size={20} />
+            </button>
+            {!sidebarOpen && (
+              <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400" title="Menu">
+                 <Menu size={20} />
+              </button>
+            )}
+            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Bot size={24} />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div>
+              <h2 className="font-bold text-white text-lg leading-tight flex items-center gap-2">
+                CampusMind AI 
+              </h2>
+              <span className="text-xs text-green-400 flex items-center gap-1 font-medium mt-0.5">
+                <span className="w-2 h-2 bg-green-500 rounded-full"></span>{" "}
+                Always online • 24/7
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2 items-center">
+            <div className="px-3 py-1.5 rounded-full border border-green-500/30 text-green-400 text-xs font-bold flex items-center gap-1 bg-green-500/10">
+               <CheckCircle size={14} /> Protected
+            </div>
+          </div>
+        </div>
 
       {/* Messages Area */}
       <div
@@ -625,10 +638,24 @@ const Chat = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             key={idx}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex gap-3 w-full ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
           >
+            {msg.role !== "system" && (
+              <div className={`w-8 h-8 mt-1 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${msg.role === "user" ? "bg-blue-100" : "bg-blue-600 shadow-lg shadow-blue-500/20"}`}>
+                {msg.role === "user" ? (
+                  user?.picture ? (
+                    <img src={user.picture} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={16} className="text-blue-600" />
+                  )
+                ) : (
+                  <Bot size={18} className="text-white" />
+                )}
+              </div>
+            )}
+            
             <div
-              className={`max-w-[80%] rounded-2xl p-4 shadow-sm relative group ${msg.role === "user" ? "bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-br-none" : msg.role === "system" ? "bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 text-yellow-800 dark:text-yellow-200 w-full max-w-full text-center text-sm" : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-bl-none"}`}
+              className={`max-w-[80%] rounded-2xl p-4 relative group ${msg.role === "user" ? "bg-blue-600 text-white rounded-br-none shadow-lg shadow-blue-500/20" : msg.role === "system" ? "bg-white/5 border border-white/10 text-slate-300 w-full max-w-full text-center text-sm rounded-xl" : "bg-white/5 border border-white/5 text-slate-200 rounded-bl-none shadow-md"}`}
             >
               <div className="leading-relaxed text-sm">
                 {(() => {
@@ -694,35 +721,30 @@ const Chat = () => {
       </div>
 
       {/* Input Area */}
-      <div
-        className="sticky
-  bottom-0
-  z-20
-  p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-white/10"
-      >
+      <div className="sticky bottom-0 z-20 p-4 sm:p-6 bg-gradient-to-t from-[#111827] via-[#111827] to-transparent pt-12 mt-auto">
         {/* Tools Bar */}
-        <div className="flex gap-2 mb-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex flex-wrap gap-2 mb-4 justify-start max-w-4xl mx-auto">
           <button
             onClick={() => setShowWhiteboard(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold rounded-full hover:bg-blue-500/20 transition-colors whitespace-nowrap"
           >
             <PenTool size={14} /> Whiteboard
           </button>
           <button
             onClick={startLectureMode}
-            className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-bold rounded-lg hover:bg-green-100 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/30 text-green-500 text-xs font-bold rounded-full hover:bg-green-500/20 transition-colors whitespace-nowrap"
           >
             <Mic size={14} /> Lecture Weaver
           </button>
           <button
             onClick={findPeer}
-            className="flex items-center gap-2 px-3 py-1.5 bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 text-xs font-bold rounded-lg hover:bg-pink-100 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-pink-500/10 border border-pink-500/30 text-pink-400 text-xs font-bold rounded-full hover:bg-pink-500/20 transition-colors whitespace-nowrap"
           >
             <Users size={14} /> Peer Match
           </button>
           <button
             onClick={startStudyPlan}
-            className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 text-xs font-bold rounded-lg hover:bg-teal-100 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs font-bold rounded-full hover:bg-teal-500/20 transition-colors whitespace-nowrap"
           >
             <Calendar size={14} /> Study Plan
           </button>
@@ -732,7 +754,7 @@ const Chat = () => {
                 "Generate a customized project idea for my resume skills.",
               )
             }
-            className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-bold rounded-lg hover:bg-purple-100 transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold rounded-full hover:bg-purple-500/20 transition-colors whitespace-nowrap"
           >
             <Lightbulb size={14} /> Project Genesis
           </button>
@@ -1055,7 +1077,7 @@ const Chat = () => {
           )}
         </AnimatePresence>
 
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900/50 p-2 rounded-2xl border border-slate-200 dark:border-white/5 focus-within:ring-2 ring-blue-500/50 transition-all relative">
+        <div className="flex items-center gap-2 bg-[#0f172a] p-2 rounded-2xl border border-white/10 focus-within:ring-2 ring-blue-500/50 transition-all relative max-w-4xl mx-auto shadow-2xl shadow-black/50">
           <input
             type="file"
             ref={fileInputRef}
@@ -1066,14 +1088,14 @@ const Chat = () => {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="p-3 text-slate-400 hover:text-blue-500 hover:bg-white dark:hover:bg-white/5 rounded-xl transition-all"
+            className="p-3 text-slate-500 hover:text-blue-400 hover:bg-white/5 rounded-xl transition-all"
             title="Attach File"
           >
             <Paperclip size={20} />
           </button>
           <button
             onClick={startLectureMode}
-            className={`p-3 rounded-xl transition-all ${isListening && input.startsWith("🎓 ANALYZING LECTURE: ") ? "bg-green-500 text-white animate-pulse shadow-lg shadow-green-500/30" : "text-slate-400 hover:text-green-500 hover:bg-white dark:hover:bg-white/5"}`}
+            className={`p-3 rounded-xl transition-all ${isListening && input.startsWith("🎓 ANALYZING LECTURE: ") ? "bg-green-500 text-white animate-pulse shadow-lg shadow-green-500/30" : "text-slate-500 hover:text-green-400 hover:bg-white/5"}`}
             title="Lecture Weaver"
           >
             <Mic size={20} />
@@ -1081,8 +1103,8 @@ const Chat = () => {
 
           <input
             type="text"
-            className="flex-1 bg-transparent border-none outline-none text-slate-800 dark:text-white placeholder-slate-400 px-2"
-            placeholder={isListening ? "Listening..." : "Ask an academic or study question..."}
+            className="flex-1 bg-transparent border-none outline-none text-white placeholder-slate-500 px-2 min-w-0"
+            placeholder={isListening ? "Listening..." : "Ask your CampusMind AI..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
@@ -1090,7 +1112,7 @@ const Chat = () => {
 
           <button
             onClick={toggleListening}
-            className={`p-2 rounded-lg transition-all ${isListening ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30" : "text-slate-400 hover:text-blue-500 hover:bg-white dark:hover:bg-white/5"}`}
+            className={`p-2 rounded-lg transition-all ${isListening ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30" : "text-slate-500 hover:text-blue-400 hover:bg-white/5"}`}
             title="Voice Input"
           >
             <Mic size={20} />
@@ -1098,7 +1120,7 @@ const Chat = () => {
           <button
             onClick={sendMessage}
             disabled={(!input.trim() && !selectedFile) || loading}
-            className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:shadow-none transition-all"
+            className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:shadow-none transition-all shrink-0"
           >
             {loading ? (
               <Loader2 size={20} className="animate-spin" />
@@ -1109,7 +1131,8 @@ const Chat = () => {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default Chat;

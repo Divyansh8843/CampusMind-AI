@@ -61,8 +61,8 @@ const clearUserCache = async (userId) => {
     }
 
     if (keys.length > 0) {
-      // Use unlink (non-blocking delete), pass all keys at once
-      await redisClient.unlink(keys);
+      // Use raw sendCommand to bypass any wrapper signature bugs in node-redis v4/v5
+      await redisClient.sendCommand(['DEL', ...keys.map(k => String(k))]);
       console.log(`Cleared ${keys.length} cache keys for user ${userId}`);
     }
   } catch (error) {

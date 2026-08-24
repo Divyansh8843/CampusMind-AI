@@ -16,11 +16,9 @@ def get_vectorstore():
 
     from app.embeddings.embedding_model import get_embeddings
 
-    # Connect to the distributed ChromaDB StatefulSet in Kubernetes
-    chroma_host = os.environ.get("CHROMA_HOST", "chromadb-service")
-    chroma_port = os.environ.get("CHROMA_PORT", "8000")
-    
-    client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
+    # Use PersistentClient to run Chroma locally without needing a separate server
+    persist_dir = os.path.join(os.getcwd(), "chroma_db")
+    client = chromadb.PersistentClient(path=persist_dir)
 
     _vectorstore = Chroma(
         client=client,

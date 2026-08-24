@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles, History } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 
 const GUEST_STORAGE_KEY = 'campusmind_guest_support_sessions';
 const ROBOT_IMAGE = 'https://cdn-icons-png.flaticon.com/512/4712/4712109.png';
@@ -27,6 +28,9 @@ const createGuestSession = () => ({
 });
 
 const SupportBot = () => {
+    const location = useLocation();
+    if (location.pathname === '/chat') return null;
+
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -40,6 +44,7 @@ const SupportBot = () => {
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null;
     const isAuthenticated = Boolean(token);
 
     const persistGuestSession = useCallback((nextMessages, sessionId) => {
@@ -82,14 +87,7 @@ const SupportBot = () => {
             });
 
             const supportHistory = res.data?.history || [];
-            if (supportHistory.length > 0) {
-                setMessages(supportHistory);
-            } else {
-                const resAll = await axios.get(`${API_BASE_URL}/api/chat/history?type=all`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setMessages(resAll.data?.history || []);
-            }
+            setMessages(supportHistory);
 
             hasFetchedHistoryForTokenRef.current = token;
             return true;
@@ -109,15 +107,7 @@ const SupportBot = () => {
             let res = await axios.get(`${API_BASE_URL}/api/chat/sessions?type=support`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            let sessions = res.data?.sessions || [];
-
-            if (sessions.length === 0) {
-                res = await axios.get(`${API_BASE_URL}/api/chat/sessions?type=all`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                sessions = res.data?.sessions || [];
-            }
-            setChatSessions(sessions);
+            setChatSessions(res.data?.sessions || []);
         } catch (err) {
             console.error('Failed to load chat sessions', err);
         }
@@ -292,19 +282,46 @@ const SupportBot = () => {
                                         <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Previous Chats</h4>
                                         <div className="space-y-1.5">
                                             {chatSessions.length > 0 ? chatSessions.map((session, idx) => (
-                                                <button
-                                                    key={session.id || idx}
-                                                    type="button"
-                                                    className="w-full text-left p-2.5 bg-white dark:bg-slate-900 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                                    onClick={() => loadSession(session)}
-                                                >
-                                                    <div className="text-xs font-medium text-slate-800 dark:text-white truncate">
-                                                        {session.date || `Session ${idx + 1}`}
-                                                    </div>
-                                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                                        {session.messageCount || session.messages?.length || 0} msgs
-                                                    </div>
-                                                </button>
+                                                <React.Fragment key={idx}>
+                                                  {session.chats ? (
+                                                     <div className="mb-3">
+                                                       <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 px-1">
+                                                         {session.date}
+                                                       </div>
+                                                       <div className="space-y-1.5">
+                                                         {session.chats.map((chatSession, cIdx) => (
+                                                            <button
+                                                                key={cIdx}
+                                                                type="button"
+                                                                className="w-full text-left p-2.5 bg-white dark:bg-slate-900 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                                onClick={() => loadSession(chatSession)}
+                                                            >
+                                                                <div className="text-xs font-medium text-slate-800 dark:text-white truncate">
+                                                                    {chatSession.messages?.find(m => m.role === 'user')?.content?.slice(0, 30) || "New Conversation"}...
+                                                                </div>
+                                                                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                                    {chatSession.messages?.length || 0} msgs
+                                                                </div>
+                                                            </button>
+                                                         ))}
+                                                       </div>
+                                                     </div>
+                                                  ) : (
+                                                     <button
+                                                         key={session.id || idx}
+                                                         type="button"
+                                                         className="w-full text-left p-2.5 bg-white dark:bg-slate-900 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors mb-1.5"
+                                                         onClick={() => loadSession(session)}
+                                                     >
+                                                         <div className="text-xs font-medium text-slate-800 dark:text-white truncate">
+                                                             {session.messages?.find(m => m.role === 'user')?.content?.slice(0, 30) || session.date || `Session ${idx + 1}`}
+                                                         </div>
+                                                         <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                             {session.messageCount || session.messages?.length || 0} msgs
+                                                         </div>
+                                                     </button>
+                                                  )}
+                                                </React.Fragment>
                                             )) : (
                                                 <div className="text-xs text-slate-400 p-2">No chats yet</div>
                                             )}
@@ -344,9 +361,13 @@ const SupportBot = () => {
                                 <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${msg.role === 'user' ? 'bg-blue-100' : 'bg-purple-100'}`}>
                                         {msg.role === 'user' ? (
-                                            <User size={12} className="text-blue-600" />
+                                            user?.picture ? (
+                                                <img src={user.picture} alt="User" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <User size={12} className="text-blue-600" />
+                                            )
                                         ) : (
-                                            <img src={ROBOT_IMAGE} className="w-5 h-5 object-contain" alt="" />
+                                            <img src={ROBOT_IMAGE} className="w-5 h-5 object-contain" alt="Agent" />
                                         )}
                                     </div>
                                     <div className={`p-2.5 rounded-xl max-w-[82%] text-xs leading-relaxed break-words ${

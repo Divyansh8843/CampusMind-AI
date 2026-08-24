@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import multer from "multer";
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { v2 as cloudinary } from "cloudinary";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const MAX_UPLOAD_MB = parseInt(process.env.MAX_UPLOAD_MB || "20", 10);
 const UPLOAD_ROOT = path.resolve(__dirname, "..", "uploads");
 const LOCAL_PROVIDER = "local";
-const S3_PROVIDER = "s3";
+const CLOUDINARY_PROVIDER = "cloudinary";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -60,24 +60,22 @@ const getServerBaseUrl = () =>
     .trim()
     .replace(/\/$/, "");
 
-// Setup AWS S3 Client
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID?.trim(),
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY?.trim(),
-  },
+// Setup Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export const isS3Configured = () =>
+export const isCloudinaryConfigured = () =>
   Boolean(
-    process.env.AWS_BUCKET_NAME &&
-    process.env.AWS_ACCESS_KEY_ID &&
-    process.env.AWS_SECRET_ACCESS_KEY
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
   );
 
-// Legacy export to prevent breaking upload.routes.js
-export const isCloudinaryConfigured = isS3Configured;
+// Legacy export to prevent breaking other files expecting isS3Configured
+export const isS3Configured = isCloudinaryConfigured;
 
 const buildLocalFileName = (userId, originalName) => {
   const ext = sanitizeExtension(originalName);
@@ -89,31 +87,31 @@ const buildLocalFileName = (userId, originalName) => {
   );
 };
 
-const uploadToS3 = async (file, userId) => {
-  const bucket = process.env.AWS_BUCKET_NAME;
-  const region = process.env.AWS_REGION || "us-east-1";
-  const ext = sanitizeExtension(file.originalname);
-  const base = sanitizeBaseName(file.originalname);
-  const key = `documents/${userId}/${Date.now()}-${base}${ext}`;
+const uploadToCloudinary = async (file, userId) => {
+  return new Promise((resolve, reject) => {
+    const ext = sanitizeExtension(file.originalname);
+    const base = sanitizeBaseName(file.originalname);
+    const filename = `${Date.now()}-${base}${ext}`;
 
-  const command = new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: file.buffer,
-    ContentType: file.mimetype,
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: `documents/${userId}`,
+        public_id: filename,
+        resource_type: "raw",
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve({
+          provider: CLOUDINARY_PROVIDER,
+          filename: result.public_id,
+          url: result.secure_url,
+          bytes: result.bytes,
+          resourceType: result.resource_type,
+        });
+      }
+    );
+    uploadStream.end(file.buffer);
   });
-
-  await s3.send(command);
-
-  const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-
-  return {
-    provider: S3_PROVIDER,
-    filename: key,
-    url: url,
-    bytes: file.size,
-    resourceType: "raw",
-  };
 };
 
 const uploadLocally = async (file, userId) => {
@@ -136,34 +134,33 @@ export const storeUploadedFile = async (file, { userId }) => {
     throw new Error("No file buffer found for upload.");
   }
 
-  if (isS3Configured()) {
+  if (isCloudinaryConfigured()) {
     try {
-      return await uploadToS3(file, userId);
+      return await uploadToCloudinary(file, userId);
     } catch (error) {
-      if (process.env.NODE_ENV === "production") {
-        console.error(`S3 upload fatal error: ${error.message}`);
-        throw new Error(`AWS S3 Upload Failed: ${error.message}. Please check if the bucket exists and IAM permissions are correct.`);
+      if (process.env.NODE_ENV === "production" && process.env.CLOUDINARY_FALLBACK_TO_LOCAL !== "true") {
+        console.error(`Cloudinary upload fatal error: ${error.message}`);
+        throw new Error(`Cloudinary Upload Failed: ${error.message}. Please check credentials.`);
       }
-      console.warn(`S3 upload failed (${error.message}). Falling back to local storage in development mode.`);
+      console.warn(`Cloudinary upload failed (${error.message}). Falling back to local storage.`);
       return uploadLocally(file, userId);
     }
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Production Error: AWS S3 is not configured in the environment variables!");
+  if (process.env.NODE_ENV === "production" && process.env.CLOUDINARY_FALLBACK_TO_LOCAL !== "true") {
+    throw new Error("Production Error: Cloudinary is not configured in the environment variables!");
   }
   return uploadLocally(file, userId);
 };
 
-const deleteFromS3 = async (key) => {
-  const bucket = process.env.AWS_BUCKET_NAME;
-  const command = new DeleteObjectCommand({
-    Bucket: bucket,
-    Key: key,
+const deleteFromCloudinary = async (publicId) => {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.destroy(publicId, { resource_type: "raw" }, (error, result) => {
+      if (error) return reject(error);
+      console.log(`Deleted ${publicId} from Cloudinary`);
+      resolve(result);
+    });
   });
-
-  await s3.send(command);
-  console.log(`Deleted ${key} from S3 bucket ${bucket}`);
 };
 
 const deleteLocalFile = async (filename) => {
@@ -181,11 +178,9 @@ export const deleteStoredAsset = async (doc) => {
   }
 
   try {
-    if (provider === S3_PROVIDER || provider === "cloudinary") {
-      // If it was labeled cloudinary in old DB, we assume it's S3 now due to migration, or we just try S3 delete. 
-      // Safest is to just call deleteFromS3.
-      console.log(`Deleting S3 file: ${filename}`);
-      await deleteFromS3(filename);
+    if (provider === CLOUDINARY_PROVIDER || provider === "s3") {
+      console.log(`Deleting Cloudinary file: ${filename}`);
+      await deleteFromCloudinary(filename);
       return;
     }
 

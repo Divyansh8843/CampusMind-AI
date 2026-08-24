@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Brain, 
-  Sun, 
-  Moon, 
-  LogOut, 
-  User, 
-  Menu, 
-  X 
+import {
+    Brain,
+    Sun,
+    Moon,
+    LogOut,
+    User,
+    Menu,
+    X
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -46,14 +46,14 @@ const Navbar = () => {
         const baseClass = mobile
             ? `block text-slate-600 dark:text-slate-300 font-medium py-2 ${className}`
             : `text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${className}`;
-        
+
         const activeClass = "text-blue-600 dark:text-blue-400 font-semibold";
 
         if (isRouterLink) {
             return (
-                <NavLink 
-                    to={to} 
-                    className={({ isActive }) => 
+                <NavLink
+                    to={to}
+                    className={({ isActive }) =>
                         `${baseClass} ${!mobile && isActive ? activeClass : ''}`
                     }
                     onClick={() => mobile && setIsMobileMenuOpen(false)}
@@ -65,8 +65,8 @@ const Navbar = () => {
 
         if (to.startsWith('#')) {
             return (
-                <a 
-                    href={isLanding ? to : `/${to}`} 
+                <a
+                    href={isLanding ? to : `/${to}`}
                     className={baseClass}
                     onClick={() => mobile && setIsMobileMenuOpen(false)}
                 >
@@ -76,8 +76,8 @@ const Navbar = () => {
         }
 
         return (
-            <NavLink 
-                to={to} 
+            <NavLink
+                to={to}
                 className={baseClass}
                 onClick={() => mobile && setIsMobileMenuOpen(false)}
             >
@@ -105,7 +105,7 @@ const Navbar = () => {
                     {/* CENTER: Navigation Links HIDING/SHOWING based on Role */}
                     <div className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-6">
                         <LinkItem to="/" isRouterLink>Home</LinkItem>
-                        
+
                         {isLoggedIn && (
                             <>
                                 {user?.role === 'admin' ? (
@@ -121,6 +121,7 @@ const Navbar = () => {
                                 ) : (
                                     <>
                                         <LinkItem to="/dashboard" isRouterLink>Dashboard</LinkItem>
+                                        <LinkItem to="/chat" isRouterLink>Chat</LinkItem>
                                         <LinkItem to="/jobs" isRouterLink>Jobs</LinkItem>
                                         <LinkItem to="/community" isRouterLink>Community</LinkItem>
                                         <LinkItem to="/syllabus" isRouterLink>Syllabus</LinkItem>
@@ -142,7 +143,7 @@ const Navbar = () => {
                     {/* RIGHT: Actions */}
                     <div className="hidden lg:flex items-center justify-end gap-4 ml-auto">
                         {/* Theme Toggle */}
-                        <button 
+                        <button
                             onClick={toggleTheme}
                             className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 transition-colors"
                             aria-label="Toggle Theme"
@@ -164,7 +165,7 @@ const Navbar = () => {
                                         {user?.name?.split(' ')[0] || 'User'}
                                     </span>
                                 </button>
-                                
+
                                 {/* Dropdown Menu */}
                                 <div className="absolute right-0 mt-2 w-56 py-2 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right">
                                     <div className="px-4 py-3 border-b border-slate-100 dark:border-white/10">
@@ -176,15 +177,15 @@ const Navbar = () => {
                                             <NavLink to="/dashboard" className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5">
                                                 Dashboard
                                             </NavLink>
-                                         ) : user?.role === 'alumni' ? (
+                                        ) : user?.role === 'alumni' ? (
                                             <NavLink to="/alumni" className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5">
                                                 Alumni Dashboard
                                             </NavLink>
-                                         ) : (
+                                        ) : (
                                             <NavLink to="/admin" className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5">
                                                 Admin Dashboard
                                             </NavLink>
-                                         )}
+                                        )}
                                         <NavLink to="/profile" className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5">
                                             My Profile
                                         </NavLink>
@@ -199,7 +200,7 @@ const Navbar = () => {
                                             </>
                                         )}
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={handleLogout}
                                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2 border-t border-slate-100 dark:border-white/10"
                                     >
@@ -208,8 +209,8 @@ const Navbar = () => {
                                 </div>
                             </div>
                         ) : (
-                            <NavLink 
-                                to="/login" 
+                            <NavLink
+                                to="/login"
                                 className="px-5 py-2 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/25"
                             >
                                 Login
@@ -219,13 +220,13 @@ const Navbar = () => {
 
                     {/* Mobile Menu Button */}
                     <div className="lg:hidden flex items-center gap-4 ml-auto">
-                        <button 
+                        <button
                             onClick={toggleTheme}
                             className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400"
                         >
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
-                        <button 
+                        <button
                             aria-label="Toggle Mobile Menu"
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             className="text-slate-600 dark:text-white"
@@ -239,7 +240,7 @@ const Navbar = () => {
             {/* Mobile Menu */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
-                    <motion.div 
+                    <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -247,39 +248,40 @@ const Navbar = () => {
                     >
                         <div className="px-4 py-6 space-y-4">
                             <LinkItem to="/" isRouterLink mobile>Home</LinkItem>
-                            
+
                             {isLoggedIn ? (
-                                                user?.role === 'admin' ? (
-                                                    <>
-                                                        <LinkItem to="/admin" isRouterLink mobile>Console Dashboard</LinkItem>
-                                                        <LinkItem to="/admin/documents" isRouterLink mobile>Document Vault</LinkItem>
-                                                        <LinkItem to="/admin/audit" isRouterLink mobile>Security Audit</LinkItem>
-                                                        <LinkItem to="/profile" isRouterLink mobile>Admin Profile</LinkItem>
-                                                    </>
-                                                ) : user?.role === 'alumni' ? (
-                                                    <>
-                                                        <LinkItem to="/alumni" isRouterLink mobile>Dashboard</LinkItem>
-                                                        <LinkItem to="/profile" isRouterLink mobile>My Profile</LinkItem>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <LinkItem to="/dashboard" isRouterLink mobile>Dashboard</LinkItem>
-                                                        <LinkItem to="/profile" isRouterLink mobile>My Profile</LinkItem>
-                                                        <LinkItem to="/jobs" isRouterLink mobile>Jobs</LinkItem>
-                                                        <LinkItem to="/community" isRouterLink mobile>Community</LinkItem>
-                                                        <LinkItem to="/syllabus" isRouterLink mobile>Syllabus Tracker</LinkItem>
-                                                        <LinkItem to="/alumni" isRouterLink mobile>Alumni Network</LinkItem>
-                                                    </>
-                                                )
-                                            ) : (
+                                user?.role === 'admin' ? (
+                                    <>
+                                        <LinkItem to="/admin" isRouterLink mobile>Console Dashboard</LinkItem>
+                                        <LinkItem to="/admin/documents" isRouterLink mobile>Document Vault</LinkItem>
+                                        <LinkItem to="/admin/audit" isRouterLink mobile>Security Audit</LinkItem>
+                                        <LinkItem to="/profile" isRouterLink mobile>Admin Profile</LinkItem>
+                                    </>
+                                ) : user?.role === 'alumni' ? (
+                                    <>
+                                        <LinkItem to="/alumni" isRouterLink mobile>Dashboard</LinkItem>
+                                        <LinkItem to="/profile" isRouterLink mobile>My Profile</LinkItem>
+                                    </>
+                                ) : (
+                                    <>
+                                        <LinkItem to="/dashboard" isRouterLink mobile>Dashboard</LinkItem>
+                                        <LinkItem to="/chat" isRouterLink mobile>CampusMind AI</LinkItem>
+                                        <LinkItem to="/profile" isRouterLink mobile>My Profile</LinkItem>
+                                        <LinkItem to="/jobs" isRouterLink mobile>Jobs</LinkItem>
+                                        <LinkItem to="/community" isRouterLink mobile>Community</LinkItem>
+                                        <LinkItem to="/syllabus" isRouterLink mobile>Syllabus Tracker</LinkItem>
+                                        <LinkItem to="/alumni" isRouterLink mobile>Alumni Network</LinkItem>
+                                    </>
+                                )
+                            ) : (
                                 <>
                                     <LinkItem to="#features" mobile>Features</LinkItem>
                                     <LinkItem to="/pricing" isRouterLink mobile>Pricing</LinkItem>
                                     <LinkItem to="#how-it-works" mobile>How it Works</LinkItem>
                                     <div className="pt-4 mt-4 border-t border-slate-100 dark:border-white/10">
-                                        <NavLink 
-                                            to="/login" 
-                                            className="block w-full text-center py-3 rounded-xl bg-blue-600 text-white font-bold" 
+                                        <NavLink
+                                            to="/login"
+                                            className="block w-full text-center py-3 rounded-xl bg-blue-600 text-white font-bold"
                                             onClick={() => setIsMobileMenuOpen(false)}
                                         >
                                             Login
@@ -287,7 +289,7 @@ const Navbar = () => {
                                     </div>
                                 </>
                             )}
-                            
+
                             {isLoggedIn && (
                                 <>
                                     <div className="border-t border-slate-100 dark:border-white/10 my-2 pt-2"></div>

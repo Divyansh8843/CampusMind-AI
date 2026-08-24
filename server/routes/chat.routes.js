@@ -214,6 +214,16 @@ const buildStudyFallbackResponse = (contextChunks) => {
   ].join("\n\n");
 };
 
+// GET /api/chat/wakeup - Proactively wake up backend and AI service
+router.get("/wakeup", (req, res) => {
+  res.status(200).json({ status: "waking up backend and AI service" });
+  
+  // Fire and forget: Hit the AI service to wake it up from Render hibernation
+  callAiService("/health", {}, { timeout: 2000 }).catch(() => {
+    // If it fails, that's fine. The act of hitting it triggers Render to spin it up.
+  });
+});
+
 // GET /api/chat/history - Get User Chat History (Paginated)
 router.get("/history", authMiddleware, async (req, res) => {
   try {
@@ -249,29 +259,48 @@ router.get("/sessions", authMiddleware, async (req, res) => {
     const query = { userId: req.user.userId };
     if (type !== "all") query.type = type;
 
-    const chats = await Chat.find(query).sort({ timestamp: -1 }).limit(100);
+    // Fetch the most recent 200 chats, then reverse to chronological order for grouping
+    const recentChats = await Chat.find(query).sort({ timestamp: -1 }).limit(200).lean();
+    const chats = recentChats.reverse();
 
-    const sessionsMap = {};
+    const groupedByDay = {};
+    let currentSession = null;
+    let lastTime = 0;
+
     chats.forEach((chat) => {
-      const date = new Date(chat.timestamp).toLocaleDateString();
-      if (!sessionsMap[date]) {
-        sessionsMap[date] = {
-          date,
-          messages: [],
-          messageCount: 0,
-        };
+      const chatTime = new Date(chat.timestamp).getTime();
+      
+      // Create a new session if > 30 mins gap, or if no current session
+      if (!currentSession || chatTime - lastTime > 30 * 60 * 1000) {
+         if (currentSession) {
+             const dStr = new Date(currentSession.messages[0].timestamp).toLocaleDateString();
+             if (!groupedByDay[dStr]) groupedByDay[dStr] = [];
+             groupedByDay[dStr].unshift(currentSession); // newest first
+         }
+         currentSession = {
+            id: chat._id.toString(),
+            messages: []
+         };
       }
-      sessionsMap[date].messages.push({
-        role: chat.role,
-        content: chat.content,
-        timestamp: chat.timestamp,
+      
+      currentSession.messages.push({
+         role: chat.role,
+         content: chat.content,
+         timestamp: chat.timestamp,
       });
-      sessionsMap[date].messageCount += 1;
+      lastTime = chatTime;
     });
 
-    const sessions = Object.values(sessionsMap).sort(
-      (a, b) => new Date(b.date) - new Date(a.date),
-    );
+    if (currentSession) {
+         const dStr = new Date(currentSession.messages[0].timestamp).toLocaleDateString();
+         if (!groupedByDay[dStr]) groupedByDay[dStr] = [];
+         groupedByDay[dStr].unshift(currentSession);
+    }
+
+    const sessions = Object.keys(groupedByDay).map(date => ({
+       date,
+       chats: groupedByDay[date]
+    })).sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.json({ sessions });
   } catch (error) {
@@ -384,7 +413,7 @@ router.post("/", authMiddleware, async (req, res) => {
           message,
           type,
           user_id: userId,
-          context_chunks: safeChunks,
+          context_chunks: type === "study" ? [] : safeChunks,
         },
         {
           timeout: 60000,
